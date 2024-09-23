@@ -12,7 +12,7 @@ class Establecimiento(db.Model):
     servicios = db.relationship('Servicio', backref='establecimiento', lazy=True)
 
     def __repr__(self):
-        return f"<Establecimiento {self.nombre}>"
+        return f"<Establecimiento {self.id} - {self.nombre} - {self.ubicacion}>"
 
 # Modelo Servicio
 class Servicio(db.Model):
@@ -27,8 +27,11 @@ class Servicio(db.Model):
     # Relación con el modelo Empleado (1 Servicio -> Muchos Empleados)
     empleados = db.relationship('Empleado', backref='servicio', lazy=True)
 
+    # Relación inversa de ActividadesExtraordinarias sobre un Servicio
+    actividades_extraordinarias = db.relationship('ActividadExtraordinaria', backref='servicio')
+
     def __repr__(self):
-        return f"<Servicio {self.nombre}>"
+        return f"<Servicio {self.id} - {self.nombre}>"
 
 # Modelo Empleado
 class Empleado(db.Model):
@@ -42,8 +45,11 @@ class Empleado(db.Model):
     # Foreign Key a la tabla Servicio
     servicio_id = db.Column(db.Integer, db.ForeignKey('servicios.id'), nullable=False)
 
+    # Relación inversa de ActividadesExtraordinarias de un Empleado
+    actividades_extraordinarias = db.relationship('ActividadExtraordinaria', backref='empleado')
+
     def __repr__(self):
-        return f"<Empleado {self.legajo} - {self.nombre} {self.apellido}>"
+        return f"<Empleado {self.legajo} - {self.nombre} - {self.apellido} - {self.rol}>"
 
 
 class Licencia(db.Model):
@@ -70,7 +76,7 @@ class Licencia(db.Model):
     autorizante = db.relationship('Empleado', foreign_keys=[legajo_autorizante])
 
     def __repr__(self):
-        return f"<Licencia {self.fecha_desde} - {self.fecha_hasta}>"
+        return f"<Licencia {self.id} - {self.fecha_desde} - {self.fecha_hasta} - {self.tipo}>"
     
 # Modelo Cupo Mensual
 class CupoMensual(db.Model):
@@ -91,8 +97,10 @@ class CupoMensual(db.Model):
                                    db.ForeignKey('empleados.legajo'),
                                    nullable=False)
 
+    guardias = db.relationship('Guardia', backref='guardia')
+
     def __repr__(self):
-        return f"<CupoMensual {self.fecha_desde} - {self.fecha_hasta}>"
+        return f"<CupoMensual {self.id} - {self.fecha_ini} - {self.fecha_fin} - {self.total} - {self.remanente}>"
 
 # Modelo DiagramaMensual
 class DiagramaMensual(db.Model):
@@ -108,5 +116,55 @@ class DiagramaMensual(db.Model):
                             db.ForeignKey('servicios.id'),
                             nullable=False)
 
+    # Relación inversa de ActividadesExtraordinarias de un Empleado
+    actividades_extraordinarias = db.relationship('ActividadExtraordinaria', backref='diagrama_mensual')
+
     def __repr__(self):
-        return f"<DiagramaMensual {self.fecha_ini} - {self.fecha_fin}>"
+        return f"<DiagramaMensual {self.id} - {self.fecha_ini} - {self.fecha_fin} - {self.estado}>"
+
+# Modelo ActividadExtraordinaria
+class ActividadExtraordinaria(db.Model):
+    __tablename__ = 'actividades_extraordinarias'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    fecha_ini = db.Column(db.Date, nullable=False)
+    fecha_fin = db.Column(db.Date, nullable=False)
+    estado = db.Column(db.String(20), nullable=False)
+
+    # Foreign Key a la tabla Servicio
+    servicio_id = db.Column(db.Integer, db.ForeignKey('servicios.id'), nullable=False)
+
+    # Foreign Key a la tabla Empleado
+    legajo_empleado = db.Column(db.String(20), db.ForeignKey('empleados.legajo'), nullable=False)
+
+    # Foreign Key a la tabla DiagramaMensual
+    diagrama_mensual_id = db.Column(db.Integer, db.ForeignKey('diagramas_mensuales.id'), nullable=False)    
+
+    def __repr__(self):
+        return f"<ActividadExtraordinaria {self.id} - {self.fecha_ini} - {self.fecha_fin} - {self.estado}>"
+    
+# Modelo Guardia
+class Guardia(db.Model):
+    __tablename__ = 'guardias'
+    
+    id = db.Column(db.Integer, db.ForeignKey('actividades_extraordinarias.id'), nullable=False, primary_key=True)
+    duracion = db.Column(db.String(20), nullable=False)
+    tipo = db.Column(db.String(20), nullable=False)   
+
+    # Foreign Key a la tabla CupoMensual
+    cupo_mensual_id = db.Column(db.Integer, db.ForeignKey('cupos_mensuales.id'), nullable=False)
+
+    def __repr__(self):
+        return f"<Guardia {self.id} - {self.duracion} - {self.tipo} - {self.cupo_mensual_id}>"
+    
+# Modelo Traslado
+class Traslado(db.Model):
+    __tablename__ = 'traslados'
+    
+    id = db.Column(db.Integer, db.ForeignKey('actividades_extraordinarias.id'), nullable=False, primary_key=True)
+    origen = db.Column(db.String(40), nullable=False)
+    destino = db.Column(db.String(40), nullable=False)   
+    tramo = db.Column(db.Integer, nullable=False)   
+
+    def __repr__(self):
+        return f"<Traslado {self.id} - {self.origen} - {self.destino} - {self.tramo}>"
