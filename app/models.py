@@ -1,4 +1,6 @@
 from . import db
+import click
+from flask.cli import with_appcontext
 
 # Modelo Establecimiento
 class Establecimiento(db.Model):
@@ -89,7 +91,7 @@ class CupoMensual(db.Model):
     remanente = db.Column(db.Double, nullable=False)
 
     # Foreign Key a la tabla Servicio
-    id_servicio = db.Column(db.Integer,
+    servicio_id = db.Column(db.Integer,
                             db.ForeignKey('servicios.id'),
                             nullable=False)
     # Foreign Key a la tabla Empleado (autorizante)
@@ -112,7 +114,7 @@ class DiagramaMensual(db.Model):
     estado = db.Column(db.String(20), nullable=False)
 
     # Foreign Key a la tabla Servicio
-    id_servicio = db.Column(db.Integer,
+    servicio_id = db.Column(db.Integer,
                             db.ForeignKey('servicios.id'),
                             nullable=False)
 
@@ -168,3 +170,28 @@ class Traslado(db.Model):
 
     def __repr__(self):
         return f"<Traslado {self.id} - {self.origen} - {self.destino} - {self.tramo}>"
+
+@click.command(name='init')
+@with_appcontext
+def init_db():
+    db.drop_all()
+    db.create_all()
+
+@click.command(name='populate')
+@with_appcontext
+def populate_db():
+    db.session.add(Establecimiento(nombre='unEstablecimiento', ubicacion='Neuquén'))
+
+    db.session.add(Servicio(nombre='unServicio', establecimiento_id='1'))
+
+    db.session.add(
+        Empleado(
+            legajo="E001",
+            nombre='Roberto', 
+            apellido='Bolaños',
+            rol='Enfermero',
+            servicio_id='1'
+        )
+    )
+
+    db.session.commit()

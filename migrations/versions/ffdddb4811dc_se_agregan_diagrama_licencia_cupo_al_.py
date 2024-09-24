@@ -23,8 +23,8 @@ def upgrade():
     sa.Column('fecha_ini', sa.Date(), nullable=False),
     sa.Column('fecha_fin', sa.Date(), nullable=False),
     sa.Column('estado', sa.String(length=20), nullable=False),
-    sa.Column('id_servicio', sa.Integer(), nullable=False),
-    sa.ForeignKeyConstraint(['id_servicio'], ['servicios.id'], ),
+    sa.Column('servicio_id', sa.Integer(), nullable=False),
+    sa.ForeignKeyConstraint(['servicio_id'], ['servicios.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('cupos_mensuales',
@@ -33,9 +33,9 @@ def upgrade():
     sa.Column('fecha_fin', sa.Date(), nullable=False),
     sa.Column('total', sa.Double(), nullable=False),
     sa.Column('remanente', sa.Double(), nullable=False),
-    sa.Column('id_servicio', sa.Integer(), nullable=False),
+    sa.Column('servicio_id', sa.Integer(), nullable=False),
     sa.Column('legajo_autorizante', sa.String(length=20), nullable=False),
-    sa.ForeignKeyConstraint(['id_servicio'], ['servicios.id'], ),
+    sa.ForeignKeyConstraint(['servicio_id'], ['servicios.id'], ),
     sa.ForeignKeyConstraint(['legajo_autorizante'], ['empleados.legajo'], ),
     sa.PrimaryKeyConstraint('id')
     )

@@ -32,4 +32,10 @@ def create_app():
     from .routes.routesEmpleado import main as main_blueprint
     app.register_blueprint(main_blueprint)
 
+    # Registramos comandos 'init' y 'populate' para resetear la bd,
+    # y hacer la carga de datos de prueba, respectivamente 
+    from .models import init_db, populate_db
+    app.cli.add_command(init_db)
+    app.cli.add_command(populate_db)
+
     return app
