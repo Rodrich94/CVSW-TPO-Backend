@@ -10,7 +10,7 @@ def crear_traslado():
     origen = data.get('origen')
     destino = data.get('destino')
     tramo = data.get('tramo')
-    fecha_inicio = data.get('fecha_inicio')  # Asegúrate de que estos campos estén en el JSON
+    fecha_inicio = data.get('fecha_inicio')  
     fecha_fin = data.get('fecha_fin')
     empleado_id = data.get('empleado_id')  # Suponiendo que estás recibiendo el ID del empleado
 
