@@ -4,8 +4,8 @@ from app.models import ActividadExtraordinaria, Licencia
 def verificar_fechas(fecha_inicio, fecha_fin, empleado_id):
     # Validar si hay superposición de fechas con actividades extraordinarias
     actividades = ActividadExtraordinaria.query.filter(
-        ActividadExtraordinaria.empleado_id == empleado_id,
-        ActividadExtraordinaria.fecha_inicio <= fecha_fin,
+        ActividadExtraordinaria.legajo_empleado == empleado_id,
+        ActividadExtraordinaria.fecha_ini <= fecha_fin,
         ActividadExtraordinaria.fecha_fin >= fecha_inicio
     ).all()
 
@@ -14,7 +14,7 @@ def verificar_fechas(fecha_inicio, fecha_fin, empleado_id):
 
     # lógica para validar la licencia
     licencias = Licencia.query.filter(
-        Licencia.empleado_id == empleado_id,
+        Licencia.legajo_empleado == empleado_id,
         Licencia.fecha_inicio <= fecha_fin,
         Licencia.fecha_fin >= fecha_inicio
     ).all()
