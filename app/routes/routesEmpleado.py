@@ -1,9 +1,11 @@
 from flask import Blueprint, jsonify
-from ..models import Empleado  # Ajusta la ruta para importar los modelos
+from ..models import Empleado  
 
-main = Blueprint('main', __name__)
+# Definir el Blueprint
+router_empleado = Blueprint('router_empleado', __name__)
 
-@main.route('/empleados', methods=['GET'])
+# Definir la ruta para obtener empleados
+@router_empleado.route('/empleados', methods=['GET'])
 def get_empleados():
     empleados = Empleado.query.all()
     return jsonify([{

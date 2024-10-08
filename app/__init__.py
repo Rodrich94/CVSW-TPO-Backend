@@ -1,3 +1,5 @@
+# app/__init__.py
+
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
@@ -28,9 +30,9 @@ def create_app():
     db.init_app(app)
     migrate = Migrate(app, db)
 
-     # Registrar el blueprint de rutas
-    from .routes.routesEmpleado import main as main_blueprint
-    app.register_blueprint(main_blueprint)
+    # Registrar todos los blueprints
+    from .routes import register_blueprints
+    register_blueprints(app)
 
     # Registramos comandos 'init' y 'populate' para resetear la bd,
     # y hacer la carga de datos de prueba, respectivamente 

@@ -58,8 +58,8 @@ class Licencia(db.Model):
     __tablename__ = 'licencias'
 
     id = db.Column(db.Integer, primary_key=True)
-    fecha_desde = db.Column(db.Date, nullable=False)
-    fecha_hasta = db.Column(db.Date, nullable=False)
+    fecha_inicio = db.Column(db.Date, nullable=False)
+    fecha_fin = db.Column(db.Date, nullable=False)
     tipo = db.Column(db.String(20), nullable=False)
 
     # Foreign Key a la tabla Empleado (se toma licencia)
@@ -114,12 +114,12 @@ class DiagramaMensual(db.Model):
     estado = db.Column(db.String(20), nullable=False)
 
     # Foreign Key a la tabla Servicio
-    servicio_id = db.Column(db.Integer,
-                            db.ForeignKey('servicios.id'),
-                            nullable=False)
+    servicio_id = db.Column(db.Integer, db.ForeignKey('servicios.id'), nullable=False)
 
-    # Relación inversa de ActividadesExtraordinarias de un Empleado
-    actividades_extraordinarias = db.relationship('ActividadExtraordinaria', backref='diagrama_mensual')
+    # Relación con ActividadExtraordinaria (backref en DiagramaMensual)
+    actividades_extraordinarias = db.relationship('ActividadExtraordinaria', 
+                                                 secondary='actividad_diagrama', 
+                                                 backref='diagramas_mensuales')  # Backref aquí
 
     def __repr__(self):
         return f"<DiagramaMensual {self.id} - {self.fecha_ini} - {self.fecha_fin} - {self.estado}>"
@@ -139,12 +139,16 @@ class ActividadExtraordinaria(db.Model):
     # Foreign Key a la tabla Empleado
     legajo_empleado = db.Column(db.String(20), db.ForeignKey('empleados.legajo'), nullable=False)
 
-    # Foreign Key a la tabla DiagramaMensual
-    diagrama_mensual_id = db.Column(db.Integer, db.ForeignKey('diagramas_mensuales.id'), nullable=False)    
-
     def __repr__(self):
         return f"<ActividadExtraordinaria {self.id} - {self.fecha_ini} - {self.fecha_fin} - {self.estado}>"
-    
+
+# Modelo ActividadDiagrama (Tabla intermedia con clave primaria compuesta)
+class ActividadDiagrama(db.Model):
+    __tablename__ = 'actividad_diagrama'
+
+    actividad_id = db.Column(db.Integer, db.ForeignKey('actividades_extraordinarias.id'), primary_key=True, nullable=False)
+    diagrama_id = db.Column(db.Integer, db.ForeignKey('diagramas_mensuales.id'), primary_key=True, nullable=False)
+
 # Modelo Guardia
 class Guardia(db.Model):
     __tablename__ = 'guardias'
@@ -168,6 +172,8 @@ class Traslado(db.Model):
     destino = db.Column(db.String(40), nullable=False)   
     tramo = db.Column(db.Integer, nullable=False)   
 
+    actividad = db.relationship("ActividadExtraordinaria", backref="traslado", uselist=False)
+
     def __repr__(self):
         return f"<Traslado {self.id} - {self.origen} - {self.destino} - {self.tramo}>"
 
@@ -180,18 +186,31 @@ def init_db():
 @click.command(name='populate')
 @with_appcontext
 def populate_db():
-    db.session.add(Establecimiento(nombre='unEstablecimiento', ubicacion='Neuquén'))
+    # Agregar 4 establecimientos
+    establecimiento1 = Establecimiento(nombre='Hospital Central', ubicacion='Neuquén')
+    establecimiento2 = Establecimiento(nombre='Clínica del Sur', ubicacion='Plottier')
+    establecimiento3 = Establecimiento(nombre='Sanatorio Norte', ubicacion='Centenario')
+    establecimiento4 = Establecimiento(nombre='Centro Médico Este', ubicacion='Zapala')
 
-    db.session.add(Servicio(nombre='unServicio', establecimiento_id='1'))
+    db.session.add_all([establecimiento1, establecimiento2, establecimiento3, establecimiento4])
 
-    db.session.add(
-        Empleado(
-            legajo="E001",
-            nombre='Roberto', 
-            apellido='Bolaños',
-            rol='Enfermero',
-            servicio_id='1'
-        )
-    )
+    # Agregar 4 servicios para los establecimientos
+    servicio1 = Servicio(nombre='Cardiología', establecimiento=establecimiento1)
+    servicio2 = Servicio(nombre='Traumatología', establecimiento=establecimiento2)
+    servicio3 = Servicio(nombre='Pediatría', establecimiento=establecimiento3)
+    servicio4 = Servicio(nombre='Emergencias', establecimiento=establecimiento4)
 
+    db.session.add_all([servicio1, servicio2, servicio3, servicio4])
+
+    # Agregar 4 empleados para los servicios
+    empleado1 = Empleado(legajo='E001', nombre='Roberto', apellido='Bolaños', rol='Enfermero', servicio=servicio1)
+    empleado2 = Empleado(legajo='E002', nombre='María', apellido='Lopez', rol='Médico', servicio=servicio2)
+    empleado3 = Empleado(legajo='E003', nombre='Juan', apellido='Pérez', rol='Auxiliar', servicio=servicio3)
+    empleado4 = Empleado(legajo='E004', nombre='Ana', apellido='González', rol='Paramédico', servicio=servicio4)
+
+    db.session.add_all([empleado1, empleado2, empleado3, empleado4])
+
+    # Confirmar los cambios
     db.session.commit()
+    
+    print("Datos poblados exitosamente")
