@@ -51,6 +51,7 @@ def get_traslado(id):
     # Consultar el traslado con la actividad extraordinaria asociada
     traslado = db.session.query(Traslado).join(ActividadExtraordinaria).filter(Traslado.id == id).first()
 
+
     if traslado:
         # Crear la respuesta con los datos del traslado y de la actividad extraordinaria asociada
         response = {
