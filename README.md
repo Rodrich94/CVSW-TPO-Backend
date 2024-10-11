@@ -37,3 +37,10 @@ Committing to database!
 1. Establecimientos
 2. Servicios
 3. Empleados
+
+### Restablecer la base
+
+Ejecutar:
+```bash
+python -m flask seed run Truncar
+```
