@@ -1,3 +1,4 @@
+import random
 from flask_seeder import Seeder, Faker
 from app.models import Empleado, Establecimiento, Servicio
 from seeds import generators
@@ -35,3 +36,25 @@ class Servicios(Seeder):
                 )
                 print("Agregando Servicio: %s" % servicio)
                 self.db.session.add(servicio)
+
+
+# Crear empleados random para la BD
+class Empleados(Seeder):
+    def run(self):
+        faker = Faker(
+            cls=Empleado,
+            init={
+                'legajo': generators.Legajo(),
+                'nombre': generators.FirstName(),
+                'apellido': generators.LastName(),
+                'rol': generators.Rol(),
+            }
+        )
+        # IDs de servicios
+        ids = self.db.session.query(Servicio.id).all()
+        ids_servicios = [row[0] for row in ids]
+
+        for empleado in faker.create(500):
+            empleado.servicio_id = random.choice(ids_servicios)
+            print("Agregando Empleado: %s" % empleado)
+            self.db.session.add(empleado)
