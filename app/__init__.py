@@ -1,5 +1,8 @@
+# app/__init__.py
+
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
+from flask_seeder import FlaskSeeder
 from flask_migrate import Migrate
 from dotenv import load_dotenv
 import os
@@ -9,6 +12,7 @@ load_dotenv()
 
 # Crear instancia de SQLAlchemy
 db = SQLAlchemy()
+seeder = FlaskSeeder()
 
 # Crear función para inicializar la aplicación Flask
 def create_app():
@@ -27,12 +31,11 @@ def create_app():
     # Inicializar la base de datos y Flask-Migrate
     db.init_app(app)
     migrate = Migrate(app, db)
+    seeder.init_app(app, db)
 
-     # Registrar el blueprint de rutas
-    from .routes.routesEmpleado import main as main_blueprint
-    from .routes.guardia import guardias_blueprint
-    app.register_blueprint(main_blueprint)
-    app.register_blueprint(guardias_blueprint, url_prefix='/guardias')
+    # Registrar todos los blueprints
+    from .routes import register_blueprints
+    register_blueprints(app)
 
     # Registramos comandos 'init' y 'populate' para resetear la bd,
     # y hacer la carga de datos de prueba, respectivamente 

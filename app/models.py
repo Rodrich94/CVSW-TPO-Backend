@@ -1,6 +1,15 @@
 from . import db
 import click
 from flask.cli import with_appcontext
+import enum
+from sqlalchemy import Enum
+
+class EmpleadoEnum(enum.Enum):
+    GESTION = "Gestión"
+    AUTORIZANTE = "Autorizante"
+
+def get_enum_values(enum_class):
+    return [member.value for member in enum_class]
 
 import enum
 from sqlalchemy import Enum
@@ -17,8 +26,8 @@ class Establecimiento(db.Model):
     __tablename__ = 'establecimientos'
     
     id = db.Column(db.Integer, primary_key=True)
-    nombre = db.Column(db.String(20), nullable=False)
-    ubicacion = db.Column(db.String(30), nullable=False)
+    nombre = db.Column(db.String(100), nullable=False)
+    ubicacion = db.Column(db.String(100), nullable=False)
     
     # Relación con el modelo Servicio (1 a Muchos)
     servicios = db.relationship('Servicio', backref='establecimiento', lazy="joined")
@@ -73,8 +82,8 @@ class Licencia(db.Model):
     __tablename__ = 'licencias'
 
     id = db.Column(db.Integer, primary_key=True)
-    fecha_desde = db.Column(db.Date, nullable=False)
-    fecha_hasta = db.Column(db.Date, nullable=False)
+    fecha_inicio = db.Column(db.Date, nullable=False)
+    fecha_fin = db.Column(db.Date, nullable=False)
     tipo = db.Column(db.String(20), nullable=False)
 
     # Foreign Key a la tabla Empleado (se toma licencia)
@@ -131,12 +140,12 @@ class DiagramaMensual(db.Model):
     estado = db.Column(db.String(20), nullable=False)
 
     # Foreign Key a la tabla Servicio
-    servicio_id = db.Column(db.Integer,
-                            db.ForeignKey('servicios.id'),
-                            nullable=False)
+    servicio_id = db.Column(db.Integer, db.ForeignKey('servicios.id'), nullable=False)
 
-    # Relación inversa de ActividadesExtraordinarias de un Empleado
-    actividades_extraordinarias = db.relationship('ActividadExtraordinaria', backref='diagrama_mensual')
+    # Relación con ActividadExtraordinaria (backref en DiagramaMensual)
+    actividades_extraordinarias = db.relationship('ActividadExtraordinaria', 
+                                                 secondary='actividad_diagrama', 
+                                                 backref='diagramas_mensuales')  # Backref aquí
 
     def __repr__(self):
         return f"<DiagramaMensual {self.id} - {self.fecha_ini} - {self.fecha_fin} - {self.estado}>"
@@ -156,14 +165,16 @@ class ActividadExtraordinaria(db.Model):
     # Foreign Key a la tabla Empleado
     legajo_empleado = db.Column(db.String(20), db.ForeignKey('empleados.legajo'), nullable=False)
 
-    # Foreign Key a la tabla DiagramaMensual
-    diagrama_mensual_id = db.Column(db.Integer, db.ForeignKey('diagramas_mensuales.id'), nullable=False)
-
-    guardias = db.relationship('Guardia', back_populates='actividad_extraordinaria')    
-
     def __repr__(self):
         return f"<ActividadExtraordinaria {self.id} - {self.fecha_ini} - {self.fecha_fin} - {self.estado}>"
-    
+
+# Modelo ActividadDiagrama (Tabla intermedia con clave primaria compuesta)
+class ActividadDiagrama(db.Model):
+    __tablename__ = 'actividad_diagrama'
+
+    actividad_id = db.Column(db.Integer, db.ForeignKey('actividades_extraordinarias.id'), primary_key=True, nullable=False)
+    diagrama_id = db.Column(db.Integer, db.ForeignKey('diagramas_mensuales.id'), primary_key=True, nullable=False)
+
 # Modelo Guardia
 class Guardia(db.Model):
     __tablename__ = 'guardias'
@@ -187,7 +198,9 @@ class Traslado(db.Model):
     id = db.Column(db.Integer, db.ForeignKey('actividades_extraordinarias.id'), nullable=False, primary_key=True)
     origen = db.Column(db.String(40), nullable=False)
     destino = db.Column(db.String(40), nullable=False)   
-    tramo = db.Column(db.Integer, nullable=False)   
+    tramo = db.Column(Enum('1', '2', '3', name='tramos_enum'), nullable=False)   #Solo se permiten 3 tramos según la especificacion
+
+    actividad = db.relationship("ActividadExtraordinaria", backref="traslado", uselist=False)
 
     def __repr__(self):
         return f"<Traslado {self.id} - {self.origen} - {self.destino} - {self.tramo}>"
@@ -201,107 +214,31 @@ def init_db():
 @click.command(name='populate')
 @with_appcontext
 def populate_db():
-    unEstablecimiento = Establecimiento(nombre='unEstablecimiento', ubicacion='Neuquén')
-    db.session.add(unEstablecimiento)
-    
-    unServicio = Servicio(nombre='unServicio')
-    db.session.add(unServicio)
-    
-    unEstablecimiento.servicios.append(unServicio)
-    
-    unEmpleado = Empleado(legajo="E001",
-                          nombre='Roberto', 
-                          apellido='Bolaños',
-                          rol=EmpleadoEnum.AUTORIZANTE
-                          )
-    db.session.add(unEmpleado)
-    unServicio.empleados.append(unEmpleado)
+    # Agregar 4 establecimientos
+    establecimiento1 = Establecimiento(nombre='Hospital Central', ubicacion='Neuquén')
+    establecimiento2 = Establecimiento(nombre='Clínica del Sur', ubicacion='Plottier')
+    establecimiento3 = Establecimiento(nombre='Sanatorio Norte', ubicacion='Centenario')
+    establecimiento4 = Establecimiento(nombre='Centro Médico Este', ubicacion='Zapala')
 
-    from datetime import datetime
-    unDiagrama = DiagramaMensual(fecha_ini= datetime.now(), 
-                                 fecha_fin= datetime.now(),
-                                 estado='Aprobado'
-                                 )
-    db.session.add(unDiagrama)
-    unServicio.diagrama_mensual = unDiagrama
-    
-    unaActividad = ActividadExtraordinaria(fecha_ini = "2024-10-13", 
-                                           fecha_fin = "2024-10-14", 
-                                           estado = 'Realizada'
-                                           )
-    db.session.add(unaActividad)
+    db.session.add_all([establecimiento1, establecimiento2, establecimiento3, establecimiento4])
 
-    unServicio.actividades_extraordinarias.append(unaActividad)
-    unEmpleado.actividades_extraordinarias.append(unaActividad)
-    unDiagrama.actividades_extraordinarias.append(unaActividad)
+    # Agregar 4 servicios para los establecimientos
+    servicio1 = Servicio(nombre='Cardiología', establecimiento=establecimiento1)
+    servicio2 = Servicio(nombre='Traumatología', establecimiento=establecimiento2)
+    servicio3 = Servicio(nombre='Pediatría', establecimiento=establecimiento3)
+    servicio4 = Servicio(nombre='Emergencias', establecimiento=establecimiento4)
 
-    unaGuardia = Guardia(duracion = 'Media',
-                         tipo = "Pasiva"
-                         )
-    db.session.add(unaGuardia)
-    unaGuardia.actividad_extraordinaria = unaActividad
+    db.session.add_all([servicio1, servicio2, servicio3, servicio4])
 
-    unCupoMensual = CupoMensual(fecha_ini = datetime.now(),
-                                fecha_fin = datetime.now(), 
-                                total = 62,
-                                remanente = 10)
-    db.session.add(unCupoMensual)
+    # Agregar 4 empleados para los servicios
+    empleado1 = Empleado(legajo='E001', nombre='Roberto', apellido='Bolaños', rol='Enfermero', servicio=servicio1)
+    empleado2 = Empleado(legajo='E002', nombre='María', apellido='Lopez', rol='Médico', servicio=servicio2)
+    empleado3 = Empleado(legajo='E003', nombre='Juan', apellido='Pérez', rol='Auxiliar', servicio=servicio3)
+    empleado4 = Empleado(legajo='E004', nombre='Ana', apellido='González', rol='Paramédico', servicio=servicio4)
 
-    unCupoMensual.servicio = unServicio
-    unCupoMensual.guardias.append(unaGuardia)
-    unCupoMensual.autorizante = unEmpleado
+    db.session.add_all([empleado1, empleado2, empleado3, empleado4])
 
-    ###
-
-    otroEmpleado = Empleado(legajo="E002",
-                          nombre='Lucrecia', 
-                          apellido='Rodríguez',
-                          rol= EmpleadoEnum.AUTORIZANTE
-                          )
-    db.session.add(otroEmpleado)
-    unServicio.empleados.append(otroEmpleado)
-
-    otraActividad = ActividadExtraordinaria(fecha_ini = "2024-10-13", 
-                                           fecha_fin = "2024-10-14", 
-                                           estado = 'Realizada'
-                                           )
-    db.session.add(otraActividad)
-
-    unServicio.actividades_extraordinarias.append(otraActividad)
-    otroEmpleado.actividades_extraordinarias.append(otraActividad)
-    unDiagrama.actividades_extraordinarias.append(otraActividad)
-
-    otraGuardia = Guardia(duracion = 'Completa',
-                         tipo = "Activa"
-                         )
-    db.session.add(otraGuardia)
-    otraGuardia.actividad_extraordinaria = otraActividad
-
-    unCupoMensual.guardias.append(otraGuardia)
-
-    otroServicio = Servicio(nombre='otroServicio')
-    db.session.add(otroServicio)
-    
-    unEstablecimiento.servicios.append(otroServicio)
-
-    ###
-
-    nuevaActividad = ActividadExtraordinaria(fecha_ini = datetime.now(), 
-                                           fecha_fin = datetime.now(), 
-                                           estado = 'Pendiente'
-                                           )
-    db.session.add(nuevaActividad)
-
-    unServicio.actividades_extraordinarias.append(nuevaActividad)
-    unEmpleado.actividades_extraordinarias.append(nuevaActividad)
-    unDiagrama.actividades_extraordinarias.append(nuevaActividad)
-
-    nuevaGuardia = Guardia(duracion = 'Completa',
-                         tipo = "Activa"
-                         )
-    db.session.add(nuevaGuardia)
-    nuevaGuardia.actividad_extraordinaria = nuevaActividad
-
-    unCupoMensual.guardias.append(nuevaGuardia)
-
+    # Confirmar los cambios
     db.session.commit()
+    
+    print("Datos poblados exitosamente")
