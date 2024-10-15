@@ -30,7 +30,9 @@ def create_app():
 
      # Registrar el blueprint de rutas
     from .routes.routesEmpleado import main as main_blueprint
+    from .routes.guardia import guardias_blueprint
     app.register_blueprint(main_blueprint)
+    app.register_blueprint(guardias_blueprint, url_prefix='/guardias')
 
     # Registramos comandos 'init' y 'populate' para resetear la bd,
     # y hacer la carga de datos de prueba, respectivamente 

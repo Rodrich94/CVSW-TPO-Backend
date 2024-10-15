@@ -1,0 +1,16 @@
+GET http://localhost:5000/guardias
+
+###
+
+PUT http://localhost:5000/guardias
+Content-Type: application/json
+
+{
+    "establecimiento": "unEstablecimiento",
+    "servicio": "unServicio",
+    "tipoGuardia": "Activa",
+    "fechaGuardia": "2024-10-15",
+    "legajoEmpleado": "E002",
+    "idGuardia": 3,
+    "hola": "asd"
+}
