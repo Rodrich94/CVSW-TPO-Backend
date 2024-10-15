@@ -2,6 +2,7 @@
 
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
+from flask_seeder import FlaskSeeder
 from flask_migrate import Migrate
 from dotenv import load_dotenv
 import os
@@ -11,6 +12,7 @@ load_dotenv()
 
 # Crear instancia de SQLAlchemy
 db = SQLAlchemy()
+seeder = FlaskSeeder()
 
 # Crear función para inicializar la aplicación Flask
 def create_app():
@@ -29,6 +31,7 @@ def create_app():
     # Inicializar la base de datos y Flask-Migrate
     db.init_app(app)
     migrate = Migrate(app, db)
+    seeder.init_app(app, db)
 
     # Registrar todos los blueprints
     from .routes import register_blueprints

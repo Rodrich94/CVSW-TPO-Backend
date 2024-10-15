@@ -8,8 +8,8 @@ class Establecimiento(db.Model):
     __tablename__ = 'establecimientos'
     
     id = db.Column(db.Integer, primary_key=True)
-    nombre = db.Column(db.String(20), nullable=False)
-    ubicacion = db.Column(db.String(30), nullable=False)
+    nombre = db.Column(db.String(100), nullable=False)
+    ubicacion = db.Column(db.String(100), nullable=False)
     
     # Relación con el modelo Servicio (1 a Muchos)
     servicios = db.relationship('Servicio', backref='establecimiento', lazy=True)
