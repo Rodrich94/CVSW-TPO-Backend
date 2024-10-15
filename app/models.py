@@ -1,6 +1,7 @@
 from . import db
 import click
 from flask.cli import with_appcontext
+from sqlalchemy import Enum
 
 # Modelo Establecimiento
 class Establecimiento(db.Model):
@@ -170,7 +171,7 @@ class Traslado(db.Model):
     id = db.Column(db.Integer, db.ForeignKey('actividades_extraordinarias.id'), nullable=False, primary_key=True)
     origen = db.Column(db.String(40), nullable=False)
     destino = db.Column(db.String(40), nullable=False)   
-    tramo = db.Column(db.Integer, nullable=False)   
+    tramo = db.Column(Enum('1', '2', '3', name='tramos_enum'), nullable=False)   #Solo se permiten 3 tramos según la especificacion
 
     actividad = db.relationship("ActividadExtraordinaria", backref="traslado", uselist=False)
 
