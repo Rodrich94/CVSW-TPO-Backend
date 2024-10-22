@@ -1,6 +1,6 @@
 from flask import request, jsonify
 from ..models import DiagramaMensual, ActividadExtraordinaria, ActividadDiagrama, db
-from datetime import datetime
+from ..utils.utils import convertir_fechas, validar_fechas, verificar_diagrama_existente, buscar_actividades
 
 # Controlador para crear un nuevo diagrama
 def crear_diagrama():
@@ -13,24 +13,26 @@ def crear_diagrama():
     servicio_id = data.get('servicio_id')
     
     # Convertir las fechas de cadena a objetos de fecha
-    try:
-        fecha_ini = datetime.strptime(fecha_ini_str, '%Y-%m-%d').date()
-        fecha_fin = datetime.strptime(fecha_fin_str, '%Y-%m-%d').date()
-    except ValueError:
-        return jsonify({"error": "Formato de fecha inválido"}), 400
+    resultado = convertir_fechas(fecha_ini_str, fecha_fin_str)
+    if isinstance(resultado, tuple):
+        fecha_ini, fecha_fin = resultado
+    else:
+        return resultado
     
     # Validar que las fechas sean correctas
-    if fecha_ini > fecha_fin:
-        return jsonify({"error": "La fecha de inicio no puede ser mayor a la fecha de fin"}), 400
+    validacion_fecha = validar_fechas(fecha_ini, fecha_fin)
+    if validacion_fecha:
+        return validacion_fecha
+
+    # Verificar si ya existe un diagrama en el rango de fechas
+    verificacion_diagrama = verificar_diagrama_existente(fecha_ini, fecha_fin)
+    if verificacion_diagrama:
+        return verificacion_diagrama
 
     # Buscar las actividades extraordinarias dentro del rango de fechas
-    actividades = ActividadExtraordinaria.query.filter(
-        ActividadExtraordinaria.fecha_ini.between(fecha_ini, fecha_fin),
-        ActividadExtraordinaria.servicio_id == servicio_id
-    ).all()
-    
-    if not actividades:
-        return jsonify({"error": "No se encontraron actividades extraordinarias en el rango de fechas"}), 404
+    actividades = buscar_actividades(fecha_ini, fecha_fin, servicio_id)
+    if isinstance(actividades, tuple):
+        return actividades  # Retorna el error si no hay actividades
 
     # Crear el nuevo diagrama mensual
     nuevo_diagrama = DiagramaMensual(
