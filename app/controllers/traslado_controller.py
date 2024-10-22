@@ -1,6 +1,6 @@
 from flask import request, jsonify
 from ..models import Traslado, ActividadExtraordinaria, Empleado  # Importa los modelos necesarios
-from ..utils.utils import verificar_fechas
+from ..utils.utils import verificar_fechas,verificar_EmpleadoID
 from .. import db  
 from sqlalchemy.orm import joinedload 
 def crear_traslado():
@@ -21,7 +21,7 @@ def crear_traslado():
         return jsonify({"error": mensaje}), 400
 
     # Verificar si el empleado existe
-    empleado = Empleado.query.filter_by(legajo=empleado_id).first()
+    empleado = verificar_EmpleadoID(empleado_id)
     if not empleado:
         return jsonify({"error": f"El empleado con legajo {empleado_id} no existe"}), 400
 

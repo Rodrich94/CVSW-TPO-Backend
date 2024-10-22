@@ -1,4 +1,4 @@
-from app.models import ActividadExtraordinaria, Licencia
+from app.models import ActividadExtraordinaria, Licencia, Empleado
 
 def verificar_fechas(fecha_inicio, fecha_fin, empleado_legajo):
     # Validar si hay superposición de fechas con actividades extraordinarias
@@ -22,3 +22,10 @@ def verificar_fechas(fecha_inicio, fecha_fin, empleado_legajo):
         return False, "Superposición con licencia."
 
     return True, "Validación exitosa."
+
+
+# Verificar si el empleado existe
+def verificar_EmpleadoID(empleado_id):
+    empleado = Empleado.query.filter_by(legajo=empleado_id).first()
+    if empleado:
+        return True

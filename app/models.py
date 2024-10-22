@@ -4,22 +4,6 @@ from flask.cli import with_appcontext
 import enum
 from sqlalchemy import Enum
 
-class EmpleadoEnum(enum.Enum):
-    GESTION = "Gestión"
-    AUTORIZANTE = "Autorizante"
-
-def get_enum_values(enum_class):
-    return [member.value for member in enum_class]
-
-import enum
-from sqlalchemy import Enum
-
-class EmpleadoEnum(enum.Enum):
-    GESTION = "Gestión"
-    AUTORIZANTE = "Autorizante"
-
-def get_enum_values(enum_class):
-    return [member.value for member in enum_class]
 
 # Modelo Establecimiento
 class Establecimiento(db.Model):
@@ -64,7 +48,7 @@ class Empleado(db.Model):
     legajo = db.Column(db.String(20), primary_key=True)
     nombre = db.Column(db.String(40), nullable=False)
     apellido = db.Column(db.String(40), nullable=False)
-    rol = db.Column(Enum(EmpleadoEnum, values_callable=get_enum_values), nullable=False)
+    rol = db.Column(Enum('Gestion', 'Autorizante',name='empleados_enum'), nullable=False)
 
     # Foreign Key a la tabla Servicio
     servicio_id = db.Column(db.Integer, db.ForeignKey('servicios.id'), nullable=False)
@@ -82,8 +66,8 @@ class Licencia(db.Model):
     __tablename__ = 'licencias'
 
     id = db.Column(db.Integer, primary_key=True)
-    fecha_inicio = db.Column(db.Date, nullable=False)
-    fecha_fin = db.Column(db.Date, nullable=False)
+    fecha_desde = db.Column(db.Date, nullable=False)
+    fecha_hasta = db.Column(db.Date, nullable=False)
     tipo = db.Column(db.String(20), nullable=False)
 
     # Foreign Key a la tabla Empleado (se toma licencia)
@@ -186,7 +170,7 @@ class Guardia(db.Model):
     # Foreign Key a la tabla CupoMensual
     cupo_mensual_id = db.Column(db.Integer, db.ForeignKey('cupos_mensuales.id'), nullable=False)
 
-    actividad_extraordinaria = db.relationship('ActividadExtraordinaria', back_populates='guardias')
+    actividad_extraordinaria = db.relationship('ActividadExtraordinaria', backref='guardias')
 
     def __repr__(self):
         return f"<Guardia {self.id} - {self.duracion} - {self.tipo} - {self.cupo_mensual_id}>"
@@ -231,10 +215,10 @@ def populate_db():
     db.session.add_all([servicio1, servicio2, servicio3, servicio4])
 
     # Agregar 4 empleados para los servicios
-    empleado1 = Empleado(legajo='E001', nombre='Roberto', apellido='Bolaños', rol='Enfermero', servicio=servicio1)
-    empleado2 = Empleado(legajo='E002', nombre='María', apellido='Lopez', rol='Médico', servicio=servicio2)
-    empleado3 = Empleado(legajo='E003', nombre='Juan', apellido='Pérez', rol='Auxiliar', servicio=servicio3)
-    empleado4 = Empleado(legajo='E004', nombre='Ana', apellido='González', rol='Paramédico', servicio=servicio4)
+    empleado1 = Empleado(legajo='E001', nombre='Roberto', apellido='Bolaños', rol='Autorizante', servicio=servicio1)
+    empleado2 = Empleado(legajo='E002', nombre='María', apellido='Lopez', rol='Autorizante', servicio=servicio2)
+    empleado3 = Empleado(legajo='E003', nombre='Juan', apellido='Pérez', rol='Gestion', servicio=servicio3)
+    empleado4 = Empleado(legajo='E004', nombre='Ana', apellido='González', rol='Gestion', servicio=servicio4)
 
     db.session.add_all([empleado1, empleado2, empleado3, empleado4])
 
