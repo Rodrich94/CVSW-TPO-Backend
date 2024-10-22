@@ -20,6 +20,7 @@ def borrar_traslado(id):
 def get_traslados():
     traslados = Traslado.query.all()
     return jsonify([{
+        'id': traslado.id,
         'origen': traslado.origen,       
         'destino': traslado.destino,      
         'tramo': traslado.tramo
