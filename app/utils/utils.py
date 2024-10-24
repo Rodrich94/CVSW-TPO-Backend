@@ -2,28 +2,46 @@ from app.models import ActividadExtraordinaria, Licencia, Empleado,DiagramaMensu
 from datetime import datetime
 from flask import jsonify
 
+# Función para verificar si las fechas tienen el formato correcto y si son válidas
 def verificar_fechas(fecha_inicio, fecha_fin, empleado_legajo):
-    # Validar si hay superposición de fechas con actividades extraordinarias
-    actividades = ActividadExtraordinaria.query.filter(
-        ActividadExtraordinaria.legajo_empleado == empleado_legajo,
-        ActividadExtraordinaria.fecha_ini <= fecha_fin,
-        ActividadExtraordinaria.fecha_fin >= fecha_inicio
-    ).all()
+    formato_fecha = "%Y-%m-%d"
+    
+    try:
+        # Verificar formato de fecha
+        fecha_inicio_dt = datetime.strptime(fecha_inicio, formato_fecha)
+        fecha_fin_dt = datetime.strptime(fecha_fin, formato_fecha)
+        
+        # Verificar que fecha_inicio < fecha_fin
+        if fecha_inicio_dt > fecha_fin_dt:
+            return False, "La fecha de inicio no puede ser mayor que la fecha de fin."
 
-    if actividades:
-        return False, "Superposición con otra actividad."
+        # Validar si hay superposición de fechas con actividades extraordinarias
+        actividades_existentes = ActividadExtraordinaria.query.filter(
+            ActividadExtraordinaria.legajo_empleado == empleado_legajo,
+            ActividadExtraordinaria.fecha_ini <= fecha_fin,
+            ActividadExtraordinaria.fecha_fin >= fecha_inicio
+        ).all()
+        
+        if actividades_existentes:
+            return False, f"El empleado ya tiene una actividad extraordinaria entre {fecha_inicio} y {fecha_fin}."
+        
 
-    # lógica para validar la licencia
-    licencias = Licencia.query.filter(
-        Licencia.legajo_empleado == empleado_legajo,
-        Licencia.fecha_desde <= fecha_fin,
-        Licencia.fecha_hasta >= fecha_inicio
-    ).all()
+        # lógica para validar la licencia
+        licencias = Licencia.query.filter(
+            Licencia.legajo_empleado == empleado_legajo,
+            Licencia.fecha_desde <= fecha_fin,
+            Licencia.fecha_hasta >= fecha_inicio
+        ).all()
 
-    if licencias:
-        return False, "Superposición con licencia."
+        if licencias:
+            return False, "Superposición con licencia."
 
-    return True, "Validación exitosa."
+        return True, "Fechas válidas"
+    
+    except ValueError:
+        return False, "Formato de fecha no válido. El formato debe ser 'YYYY-MM-DD'."
+
+
 
 
 # Verificar si el empleado existe
