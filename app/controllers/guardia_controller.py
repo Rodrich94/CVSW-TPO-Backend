@@ -127,13 +127,16 @@ def crear_guardias():
         if not duracion_valida:
             return jsonify({'error': error}), 400
 
-        # TODO: verificar superposición con licencias y actividades
+        # Verificar superposición con licencias y actividades
+        fechas_verificadas, error = verificar_fechas(fecha_ini, fecha_fin, legajo_empleado)
+        if not fechas_verificadas:
+            return jsonify({'error': error}), 400
 
         # Sumar guardias de acuerdo a su duración
         cantidad_guardias += int(duracion) / 24
 
     # Verificar cantidad de guardias
-    cantidad_valida, error = verificar_cantidad_guardias(tipo, cantidad_guardias)
+    cantidad_valida, error = verificar_cantidad_guardias(legajo_empleado, tipo, fecha_min, fecha_max, cantidad_guardias)
     if not cantidad_valida:
         return jsonify({'error': error}), 400
 
@@ -147,13 +150,36 @@ def crear_guardias():
     if not cupo_valido:
         return jsonify({'error': error}), 400
 
-    # TODO: guardar las guardias en la base
-    # TODO: actualizar el cupo mensual
+    # Crear las guardias
+    for guardia in guardias:
+        fecha_ini = guardia.get('fecha_ini')
+        fecha_fin = guardia.get('fecha_fin')
+        duracion = guardia.get('duracion')
 
-    return jsonify([
-        cantidad_guardias,
-        fecha_min,
-        fecha_max,
-        verificar_cupo_mensual(servicio_id, fecha_min,
-                               fecha_max, cantidad_guardias)
-    ]), 200
+        nueva_actividad = ActividadExtraordinaria(
+            fecha_ini=fecha_ini,
+            fecha_fin=fecha_fin,
+            estado='Pendiente',
+            servicio_id=servicio_id,
+            legajo_empleado=legajo_empleado
+        )
+        db.session.add(nueva_actividad)
+        db.session.flush()
+
+        nueva_guardia = Guardia(
+            id=nueva_actividad.id,
+            duracion=duracion,
+            tipo=tipo,
+            cupo_mensual_id=cupo_valido.id
+        )
+        db.session.add(nueva_guardia)
+        db.session.flush()
+
+    # Actualizar el cupo mensual
+    cupo_valido.remanente -= cantidad_guardias
+    db.session.commit()
+
+    return jsonify({
+        'mensaje': 'Guardias creadas con éxito.',
+        'cantidad_guardias': cantidad_guardias
+    }), 201

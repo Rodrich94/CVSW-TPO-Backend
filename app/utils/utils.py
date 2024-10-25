@@ -1,7 +1,9 @@
-from app.models import ActividadExtraordinaria, Licencia, Empleado, CupoMensual, DiagramaMensual, Servicio
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
+from sqlalchemy import func
 from flask import jsonify
+from app.models import ActividadExtraordinaria, Guardia, Licencia, Empleado, CupoMensual, DiagramaMensual, Servicio
+from .. import db
 
 # Función para verificar si las fechas tienen el formato correcto y si son válidas
 def verificar_fechas(fecha_inicio, fecha_fin, empleado_legajo):
@@ -169,17 +171,40 @@ def validar_duracion_guardia(duracion):
         return False, f"La duración de guardia ({duracion} hs) es incorrecta."
 
 
-def verificar_cantidad_guardias(tipo, cantidad):
+def validar_cantidad_guardias(tipo, cantidad):
     """
-    Verifica que la cantidad de guardias no exceda los límites.
+    Valida que la cantidad de guardias no exceda los límites.
     """
     if tipo == "activa" and cantidad > 10:
-        return False, "Guardias activas excedidas por empleado."
+        return False, f"Guardias activas excedidas ({cantidad}/10) por empleado."
     elif tipo == "pasiva" and cantidad > 15:
-        return False, "Guardias pasivas excedidas por empleado."
+        return False, f"Guardias pasivas excedidas ({cantidad}/15) por empleado."
     else:
         return True, "Validación exitosa."
-    # TODO: verificar también que no excendan con las que ya existan en la DB
+
+
+def verificar_cantidad_guardias(legajo_empleado, tipo, fecha_min, fecha_max, cantidad):
+    """
+    Verifica que las guardias no excendan los límites por empleado y por periodo:
+    - 10 activas;
+    - 15 pasivas.
+    """
+    guardias_empleado = (
+        db.session.query(
+            ActividadExtraordinaria.legajo_empleado,
+            func.sum(Guardia.duracion).label('suma_guardias')
+        ).join(Guardia, ActividadExtraordinaria.id == Guardia.id).filter(
+            ActividadExtraordinaria.legajo_empleado == legajo_empleado,
+            ActividadExtraordinaria.fecha_ini >= fecha_min,
+            ActividadExtraordinaria.fecha_fin <= fecha_max,
+            Guardia.tipo == tipo
+        ).group_by(ActividadExtraordinaria.legajo_empleado).first()
+    )
+
+    if guardias_empleado:
+        cantidad += float(guardias_empleado[1]) / 24
+
+    return validar_cantidad_guardias(tipo, cantidad)
 
 
 def verificar_cupo_mensual(servicio_id, fecha_ini, fecha_fin, cantidad):
@@ -189,13 +214,11 @@ def verificar_cupo_mensual(servicio_id, fecha_ini, fecha_fin, cantidad):
     cupo_mensual = CupoMensual.query.filter(
         CupoMensual.servicio_id == servicio_id,
         CupoMensual.fecha_ini <= fecha_ini,
-        CupoMensual.fecha_fin >= fecha_fin
-    ).first()  # TODO: ver el caso en que existan más de un cupo válidos
+        CupoMensual.fecha_fin >= fecha_fin,
+        CupoMensual.remanente >= cantidad
+    ).first()
 
     if cupo_mensual:
-        if cupo_mensual.remanente >= cantidad:
-            return True, "Validación exitosa."
-        else:
-            return False, "Cupo mensual excedido."
-
-    return False, "No existe un cupo mensual para el servicio."
+        return cupo_mensual, "Validación exitosa."
+    else:
+        return False, "No existe un cupo mensual válido para el servicio."
