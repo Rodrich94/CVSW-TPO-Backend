@@ -1,7 +1,8 @@
+from datetime import datetime
 from flask import request, jsonify
 from ..models import Guardia, ActividadExtraordinaria, Establecimiento, Servicio, Empleado
-from .. import db  
-from ..utils.utils import verificar_fechas
+from .. import db
+from ..utils.utils import verificar_empleado, verificar_fechas, verificar_cupo_mensual, verificar_servicio, validar_tipo_guardia, validar_fechas_guardia, validar_duracion_guardia, verificar_cantidad_guardias
 
 def obtener_guardias():
     guardias = Guardia.query.all()
@@ -77,3 +78,82 @@ def modificar_guardia():
         mensaje = "Empleado inexistente."
         #print("Empleado inexistente.")
     return jsonify({"error": mensaje}), 400
+
+
+def crear_guardias():
+    """
+    Realiza alta de guardias por empleado.
+    """
+    data = request.get_json()
+    tipo = data.get('tipo')
+    periodo = data.get('periodo')
+    servicio_id = data.get('servicio_id')
+    legajo_empleado = data.get('legajo_empleado')
+    guardias = data.get('guardias')
+
+    # Verificar tipo de guardias
+    tipo_valido, error = validar_tipo_guardia(tipo)
+    if not tipo_valido:
+        return jsonify({'error': error}), 400
+
+    # Verificar servicio
+    servicio_valido, error = verificar_servicio(servicio_id)
+    if not servicio_valido:
+        return jsonify({'error': error}), 400
+
+    # Verificar empleado
+    empleado_valido, error = verificar_empleado(legajo_empleado)
+    if not empleado_valido:
+        return jsonify({'error': error}), 400
+
+    # Datos para verificar cupo mensual y cantidad de guardias
+    fecha_min = periodo[0]
+    fecha_max = periodo[1]
+    cantidad_guardias = 0.0
+
+    # Verificar guardias
+    for guardia in guardias:
+        fecha_ini = guardia.get('fecha_ini')
+        fecha_fin = guardia.get('fecha_fin')
+        duracion = guardia.get('duracion')
+
+        # Validar fechas de guardia
+        fechas_validas, error = validar_fechas_guardia(fecha_ini, fecha_fin, periodo)
+        if not fechas_validas:
+            return jsonify({'error': error}), 400
+
+        # Validar duracion de guardia
+        duracion_valida, error = validar_duracion_guardia(duracion)
+        if not duracion_valida:
+            return jsonify({'error': error}), 400
+
+        # TODO: verificar superposición con licencias y actividades
+
+        # Sumar guardias de acuerdo a su duración
+        cantidad_guardias += int(duracion) / 24
+
+    # Verificar cantidad de guardias
+    cantidad_valida, error = verificar_cantidad_guardias(tipo, cantidad_guardias)
+    if not cantidad_valida:
+        return jsonify({'error': error}), 400
+
+    # Verificar cupo mensual
+    cupo_valido, error = verificar_cupo_mensual(
+        servicio_id,
+        fecha_min,
+        fecha_max,
+        cantidad_guardias
+    )
+    if not cupo_valido:
+        return jsonify({'error': error}), 400
+
+    # TODO: guardar las guardias en la base
+    # TODO: actualizar el cupo mensual
+
+    return jsonify([
+        cantidad_guardias,
+        fecha_min,
+        fecha_max,
+        verificar_cupo_mensual(servicio_id, fecha_min,
+                               fecha_max, cantidad_guardias)
+    ]), 200
