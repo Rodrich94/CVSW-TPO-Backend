@@ -1,5 +1,5 @@
 from flask import Blueprint
-from app.controllers.guardia_controller import obtener_guardias, modificar_guardia
+from app.controllers.guardia_controller import obtener_guardias, modificar_guardia, crear_guardias
 
 router_guardia = Blueprint('guardias', __name__)
 
@@ -10,3 +10,7 @@ def listar_guardias():
 @router_guardia.route('/guardia', methods=['PUT'])
 def cambio_empleado_en_guardia():
     return modificar_guardia()
+
+@router_guardia.route('/guardia/empleado', methods=['POST'])
+def agregar_guardias():
+    return crear_guardias()
