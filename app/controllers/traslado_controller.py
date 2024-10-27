@@ -1,5 +1,5 @@
 from flask import request, jsonify
-from ..models import Traslado, ActividadExtraordinaria, Empleado  # Importa los modelos necesarios
+from ..models import Traslado, ActividadExtraordinaria, Empleado 
 from ..utils.utils import verificar_fechas,verificar_EmpleadoID
 from .. import db  
 from sqlalchemy.orm import joinedload 
@@ -12,9 +12,12 @@ def crear_traslado():
     tramo = data.get('tramo')
     fecha_inicio = data.get('fecha_inicio')  
     fecha_fin = data.get('fecha_fin')
-    empleado_id = data.get('empleado_id')  # Suponiendo que se recibe el ID del empleado
-    servicio_id = data.get('servicio_id')  # Servicio al que pertenece la actividad
+    empleado_id = data.get('empleado_id')  
+    servicio_id = data.get('servicio_id')  
     
+
+
+
     # Validar fechas
     validacion, mensaje = verificar_fechas(fecha_inicio, fecha_fin, empleado_id)
     if not validacion:
@@ -29,7 +32,7 @@ def crear_traslado():
     nueva_actividad = ActividadExtraordinaria(
         fecha_ini=fecha_inicio,
         fecha_fin=fecha_fin,
-        estado="Pendiente",  # Puedes cambiar esto según lo que necesites
+        estado="Pendiente",  
         servicio_id=servicio_id,
         legajo_empleado=empleado_id
     )
@@ -37,7 +40,7 @@ def crear_traslado():
     db.session.add(nueva_actividad)
     db.session.flush()  # Guarda la actividad en la base de datos pero no confirma la transacción
     
-    # Ahora que la actividad tiene un ID, puedes asociar el traslado con la actividad
+    # Ahora que la actividad tiene un ID, se asocia el traslado con la actividad
     nuevo_traslado = Traslado(
         id=nueva_actividad.id,  # El traslado comparte el ID de la actividad extraordinaria
         origen=origen,
@@ -46,7 +49,7 @@ def crear_traslado():
     )
     
     db.session.add(nuevo_traslado)
-    db.session.commit()  # Confirma la transacción para ambas inserciones
+    db.session.commit() 
 
     return jsonify({"message": "Traslado creado exitosamente", "traslado": str(nuevo_traslado)}), 201
 
@@ -64,11 +67,14 @@ def get_traslado(id):
             'origen': traslado.origen,
             'destino': traslado.destino,
             'tramo': traslado.tramo,
-            'id': {
+            'actividad': {
                 'fecha_ini': traslado.actividad.fecha_ini,
                 'fecha_fin': traslado.actividad.fecha_fin,
                 'estado': traslado.actividad.estado,
-                'servicio_id': traslado.actividad.servicio_id
+                'servicio_id': traslado.actividad.servicio.nombre,
+                'nombre_empleado': traslado.actividad.empleado.nombre,
+                'apellido_empleado': traslado.actividad.empleado.apellido,
+                'legajo_empleado': traslado.actividad.empleado.legajo
             }
         }
         return jsonify(response), 200
@@ -91,7 +97,6 @@ def eliminar_traslado(id):
     if actividad:
         db.session.delete(actividad)
     
-    # Confirmar la transacción
     db.session.commit()
 
     return jsonify({"message": f"Traslado con ID {id} eliminado exitosamente"}), 200
