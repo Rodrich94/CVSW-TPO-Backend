@@ -1,11 +1,18 @@
 from flask import request, jsonify
 from ..models import Traslado, ActividadExtraordinaria, Empleado 
-from ..utils.utils import verificar_fechas,verificar_EmpleadoID
+from ..utils.utils import validar_datos_traslado
 from .. import db  
 from sqlalchemy.orm import joinedload 
 def crear_traslado():
     data = request.get_json()
     
+
+    # Validar los datos recibidos
+    validacion, mensaje = validar_datos_traslado(data)
+    if not validacion:
+        return jsonify({"error": mensaje}), 400
+
+
     # Extraer datos del JSON
     origen = data.get('origen')
     destino = data.get('destino')
@@ -15,19 +22,7 @@ def crear_traslado():
     empleado_id = data.get('empleado_id')  
     servicio_id = data.get('servicio_id')  
     
-
-
-
-    # Validar fechas
-    validacion, mensaje = verificar_fechas(fecha_inicio, fecha_fin, empleado_id)
-    if not validacion:
-        return jsonify({"error": mensaje}), 400
-
-    # Verificar si el empleado existe
-    empleado = verificar_EmpleadoID(empleado_id)
-    if not empleado:
-        return jsonify({"error": f"El empleado con legajo {empleado_id} no existe"}), 400
-
+    
     # Crear la actividad extraordinaria primero (que incluye las fechas)
     nueva_actividad = ActividadExtraordinaria(
         fecha_ini=fecha_inicio,

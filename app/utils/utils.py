@@ -4,6 +4,7 @@ from sqlalchemy import func
 from flask import jsonify
 from app.models import ActividadExtraordinaria, Guardia, Licencia, Empleado, CupoMensual, DiagramaMensual, Servicio
 from .. import db
+import re 
 
 # Función para verificar si las fechas tienen el formato correcto y si son válidas
 def verificar_fechas(fecha_inicio, fecha_fin, empleado_legajo):
@@ -15,8 +16,9 @@ def verificar_fechas(fecha_inicio, fecha_fin, empleado_legajo):
         fecha_fin_dt = datetime.strptime(fecha_fin, formato_fecha)
         
         # Verificar que fecha_inicio < fecha_fin
-        if fecha_inicio_dt > fecha_fin_dt:
-            return False, "La fecha de inicio no puede ser mayor que la fecha de fin."
+        validacion_fecha, mensaje = validar_fechas(fecha_inicio_dt,fecha_fin_dt)
+        if not validacion_fecha:
+            return False, {mensaje}
 
         # Validar si hay superposición de fechas con actividades extraordinarias
         actividades_existentes = ActividadExtraordinaria.query.filter(
@@ -26,7 +28,7 @@ def verificar_fechas(fecha_inicio, fecha_fin, empleado_legajo):
         ).all()
         
         if actividades_existentes:
-            return False, f"El empleado ya tiene una actividad extraordinaria entre {fecha_inicio} y {fecha_fin}."
+            return False, "El empleado ya tiene una actividad extraordinaria entre {fecha_inicio} y {fecha_fin}."
         
 
         # lógica para validar la licencia
@@ -45,14 +47,74 @@ def verificar_fechas(fecha_inicio, fecha_fin, empleado_legajo):
         return False, "Formato de fecha no válido. El formato debe ser 'YYYY-MM-DD'."
 
 
-
-
-# Verificar si el empleado existe
-def verificar_EmpleadoID(empleado_id):
-    empleado = Empleado.query.filter_by(legajo=empleado_id).first()
-    if empleado:
-        return True
+# Función para validar los campos de entrada de un traslado
+def validar_datos_traslado(data):
+    # Verificar que los campos requeridos existan
+    campos_requeridos = ['origen', 'destino', 'tramo', 'fecha_inicio', 'fecha_fin', 'empleado_id', 'servicio_id']
     
+    for campo in campos_requeridos:
+        if campo not in data:
+            return False, f"El campo '{campo}' es requerido."
+
+    # Verificar que el empleado tenga el formato correcto y exista
+    validacion_empleado, mensaje_empleado = verificar_EmpleadoID(data['empleado_id'])
+    if not validacion_empleado:
+        return False, mensaje_empleado
+
+    # Verificar el formato y rango de las fechas
+    validacion_fechas, mensaje_fechas = verificar_fechas(data['fecha_inicio'], data['fecha_fin'], data['empleado_id'])
+    if not validacion_fechas:
+        return False, mensaje_fechas
+
+    # Verificar que el tramo sea válido
+    validacion_tramo, mensaje_tramo = verificar_tramo(data['tramo'])
+    if not validacion_tramo:
+        return False, mensaje_tramo
+
+    return True, "Datos válidos"
+
+
+def validar_datos_diagrama(data):
+    # Verificar que los campos requeridos existan
+    campos_requeridos = ['fecha_inicio', 'fecha_fin', 'estado', 'servicio_id']
+    
+    for campo in campos_requeridos:
+        if campo not in data:
+            return False, f"El campo '{campo}' es requerido."
+
+    # Verificar que las fechas sean correctas
+    validacion_fechas, mensaje_fecha = validar_fechas(data['fecha_inicio'], data['fecha_fin'])
+    if not validacion_fechas:
+        return False, mensaje_fecha
+    
+    # Verificar que no exista diagrama en fechas
+    validacion_fechas, mensaje_diagrama = verificar_diagrama_existente(data['fecha_inicio'], data['fecha_fin'])
+    if not validacion_fechas:
+        return False, mensaje_diagrama
+
+    # Retornar éxito si todas las validaciones pasan
+    return True, "Datos del diagrama válidos"
+
+def verificar_EmpleadoID(empleado_id):
+    # Verificar si el formato es correcto
+    if not re.match(r'^E\d{3}$', empleado_id):
+        return False, f"El legajo del empleado '{empleado_id}' no es válido. Debe tener el formato 'E001'."
+
+    # Verificar si el empleado existe
+    empleado = Empleado.query.filter_by(legajo=empleado_id).first()
+    if empleado is None:
+        return False, f"El legajo tiene formato válido '{empleado_id}' pero el empleado no existe."
+
+    return True, f"El legajo '{empleado_id}' es válido y el empleado existe."
+
+
+def verificar_tramo(tramo):
+    tramos_validos = ['1', '2', '3']
+    if tramo not in tramos_validos:
+        return False, f"El tramo '{tramo}' no es válido. Debe ser 1, 2 o 3."
+    
+    return True, f"El tramo '{tramo}' es válido."
+
 
 
 def convertir_fechas(fecha_ini_str, fecha_fin_str):
@@ -70,8 +132,8 @@ def validar_fechas(fecha_ini, fecha_fin):
     Verifica si la fecha de inicio es mayor que la fecha de fin.
     """
     if fecha_ini > fecha_fin:
-        return jsonify({"error": "La fecha de inicio no puede ser mayor a la fecha de fin"}), 400
-    return None
+        return False, "La fecha de inicio no puede ser mayor a la fecha de fin"
+    return True, "Las fechas son válidas"
 
 def verificar_diagrama_existente(fecha_ini, fecha_fin):
     """
@@ -83,8 +145,8 @@ def verificar_diagrama_existente(fecha_ini, fecha_fin):
     ).first()
 
     if existe_diagrama:
-        return jsonify({"error": "Ya existe un diagrama en el rango de fechas especificado"}), 400
-    return None
+        return False, "Ya existe un diagrama en el rango de fechas especificado"
+    return True, "No existe ningún diagrama en el rango de fechas"
 
 def buscar_actividades(fecha_ini, fecha_fin, servicio_id):
     """
