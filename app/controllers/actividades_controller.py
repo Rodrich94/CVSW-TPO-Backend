@@ -20,7 +20,7 @@ def obtener_actividades(legajo_empleado):
     if not fechas_validas:
         return jsonify({'error': error}), 400
 
-    # TODO: obtener actividades
+    # Obtener actividades
     actividades = obtener_actividades_empleado(legajo_empleado, fecha_desde, fecha_hasta)
 
     return jsonify(actividades), 200
