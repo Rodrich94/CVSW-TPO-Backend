@@ -1,8 +1,8 @@
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
-from sqlalchemy import func
+from sqlalchemy import case, func
 from flask import jsonify
-from app.models import ActividadExtraordinaria, Guardia, Licencia, Empleado, CupoMensual, DiagramaMensual, Servicio
+from app.models import ActividadExtraordinaria, Guardia, Traslado, Licencia, Empleado, CupoMensual, DiagramaMensual, Servicio
 from .. import db
 import re 
 
@@ -284,3 +284,58 @@ def verificar_cupo_mensual(servicio_id, fecha_ini, fecha_fin, cantidad):
         return cupo_mensual, "Validación exitosa."
     else:
         return False, "No existe un cupo mensual válido para el servicio."
+
+
+def validar_rango_fechas(fecha_desde, fecha_hasta):
+    """
+    Valida un rango de fechas desde y hasta, con formato YYYY-MM-DD.
+    """
+    try:
+        desde = datetime.strptime(fecha_desde, "%Y-%m-%d").date()
+        hasta = datetime.strptime(fecha_hasta, "%Y-%m-%d").date()
+        if desde > hasta:
+            return False, "La fecha desde no puede ser mayor a la fecha hasta."
+        else:
+            return True, "Validación exitosa."
+    except ValueError:
+        return False, "Formato de fecha inválido."
+
+
+def obtener_actividades_empleado(legajo_empleado, fecha_desde, fecha_hasta):
+    """
+    Obtiene las actividades de un empleado para un rango de fechas [desde; hasta].
+    """
+    actividades = []
+    resultado = (
+        db.session.query(
+            ActividadExtraordinaria,
+            Guardia,
+            Traslado,
+            case((Traslado.id is None, 'Guardia'), else_='Traslado')
+        ).join(
+            Guardia,
+            Guardia.id == ActividadExtraordinaria.id,
+            isouter=True
+        ).join(
+            Traslado,
+            Traslado.id == ActividadExtraordinaria.id,
+            isouter=True
+        ).filter(
+            ActividadExtraordinaria.legajo_empleado == legajo_empleado,
+            ActividadExtraordinaria.fecha_ini >= fecha_desde,
+            ActividadExtraordinaria.fecha_fin <= fecha_hasta
+        )
+    ).all()
+
+    for tupla in resultado:
+        actividad, guardia, traslado, tipo = tupla
+        actividades.append({
+            'id': actividad.id,
+            'id_servicio': actividad.servicio_id,
+            'fecha_ini': actividad.fecha_ini.strftime("%Y-%m-%d"),
+            'fecha_fin': actividad.fecha_fin.strftime("%Y-%m-%d"),
+            'estado': actividad.estado,
+            'tipo': tipo
+        })
+
+    return actividades
