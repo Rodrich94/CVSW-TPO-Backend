@@ -16,9 +16,8 @@ def verificar_fechas(fecha_inicio, fecha_fin, empleado_legajo):
         fecha_fin_dt = datetime.strptime(fecha_fin, formato_fecha)
         
         # Verificar que fecha_inicio < fecha_fin
-        validacion_fecha, mensaje = validar_fechas(fecha_inicio_dt,fecha_fin_dt)
-        if not validacion_fecha:
-            return False, {mensaje}
+        if not fecha_inicio_dt < fecha_fin_dt:
+            return False, "La fecha de inicio debe ser menor a la de fin"
 
         # Validar si hay superposición de fechas con actividades extraordinarias
         actividades_existentes = ActividadExtraordinaria.query.filter(
@@ -74,21 +73,22 @@ def validar_datos_traslado(data):
     return True, "Datos válidos"
 
 
-def validar_datos_diagrama(data):
+def validar_datos_diagrama(data,fecha_inicio,fecha_fin):
     # Verificar que los campos requeridos existan
-    campos_requeridos = ['fecha_inicio', 'fecha_fin', 'estado', 'servicio_id']
-    
+    campos_requeridos = ['mes', 'anio', 'servicio_id']
+  
     for campo in campos_requeridos:
         if campo not in data:
             return False, f"El campo '{campo}' es requerido."
 
     # Verificar que las fechas sean correctas
-    validacion_fechas, mensaje_fecha = validar_fechas(data['fecha_inicio'], data['fecha_fin'])
+    
+    validacion_fechas, mensaje_fecha = validar_mes_anio(data['mes'],data['anio'])
     if not validacion_fechas:
         return False, mensaje_fecha
     
     # Verificar que no exista diagrama en fechas
-    validacion_fechas, mensaje_diagrama = verificar_diagrama_existente(data['fecha_inicio'], data['fecha_fin'])
+    validacion_fechas, mensaje_diagrama = verificar_diagrama_existente(fecha_inicio, fecha_fin)
     if not validacion_fechas:
         return False, mensaje_diagrama
 
@@ -127,14 +127,26 @@ def convertir_fechas(fecha_ini_str, fecha_fin_str):
         return jsonify({"error": "Formato de fecha inválido"}), 400
     
 
-def validar_fechas(fecha_ini, fecha_fin):
+def validar_mes_anio(mes, anio):
     """
-    Verifica si la fecha de inicio es mayor que la fecha de fin.
+    Verifica que el mes esté entre 1 y 12 y que el año sea positivo.
     """
-    if fecha_ini > fecha_fin:
-        return False, "La fecha de inicio no puede ser mayor a la fecha de fin"
-    return True, "Las fechas son válidas"
+    try:
+        mes = int(mes)
+        anio = int(anio)
 
+        if mes < 1 or mes > 12:
+            return False, "El mes debe estar entre 1 y 12"
+        
+        if anio < 0:
+            return False, "El año debe ser un valor positivo"
+
+        return True, "El mes y el año son válidos"
+    
+    except ValueError:
+        return False, "El mes y el año deben ser enteros positivos"
+
+    
 def verificar_diagrama_existente(fecha_ini, fecha_fin):
     """
     Verifica si ya existe un diagrama en el rango de fechas especificado.

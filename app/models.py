@@ -121,7 +121,6 @@ class DiagramaMensual(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     fecha_ini = db.Column(db.Date, nullable=False)
     fecha_fin = db.Column(db.Date, nullable=False)
-    estado = db.Column(db.String(20), nullable=False)
 
     # Foreign Key a la tabla Servicio
     servicio_id = db.Column(db.Integer, db.ForeignKey('servicios.id'), nullable=False)
