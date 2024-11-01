@@ -179,8 +179,8 @@ class Traslado(db.Model):
     __tablename__ = 'traslados'
     
     id = db.Column(db.Integer, db.ForeignKey('actividades_extraordinarias.id'), nullable=False, primary_key=True)
-    origen = db.Column(db.String(40), nullable=False)
-    destino = db.Column(db.String(40), nullable=False)   
+    origen = db.Column(db.String(100), nullable=False)
+    destino = db.Column(db.String(100), nullable=False)   
     tramo = db.Column(Enum('1', '2', '3', name='tramos_enum'), nullable=False)   #Solo se permiten 3 tramos según la especificacion
 
     actividad = db.relationship("ActividadExtraordinaria", backref="traslado", uselist=False)
