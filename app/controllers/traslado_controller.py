@@ -95,3 +95,19 @@ def eliminar_traslado(id):
     db.session.commit()
 
     return jsonify({"message": f"Traslado con ID {id} eliminado exitosamente"}), 200
+
+
+def get_traslados():
+    traslados = Traslado.query.all()
+    return jsonify([{
+        'id': traslado.id,
+        'origen': traslado.origen,       
+        'destino': traslado.destino,      
+        'tramo': traslado.tramo,
+        'actividad': {
+                'servicio_id': traslado.actividad.servicio.nombre,
+                'nombre_empleado': traslado.actividad.empleado.nombre,
+                'apellido_empleado': traslado.actividad.empleado.apellido,
+                'legajo_empleado': traslado.actividad.empleado.legajo
+            }
+    } for traslado in traslados])

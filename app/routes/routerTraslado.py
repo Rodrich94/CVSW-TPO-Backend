@@ -1,5 +1,5 @@
 from flask import Blueprint,jsonify
-from ..controllers.traslado_controller import crear_traslado,get_traslado,eliminar_traslado
+from ..controllers.traslado_controller import crear_traslado,get_traslado,eliminar_traslado, get_traslados
 from ..models import Traslado  
 
 
@@ -17,14 +17,8 @@ def borrar_traslado(id):
 
 
 @router_traslado.route('/traslados', methods=['GET'])
-def get_traslados():
-    traslados = Traslado.query.all()
-    return jsonify([{
-        'id': traslado.id,
-        'origen': traslado.origen,       
-        'destino': traslado.destino,      
-        'tramo': traslado.tramo
-    } for traslado in traslados])
+def obtener_traslados():
+    return get_traslados()
 
 # Obtener traslado por id
 @router_traslado.route('/traslado/<int:id>', methods=['GET'])

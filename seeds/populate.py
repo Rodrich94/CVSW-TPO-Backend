@@ -14,7 +14,7 @@ class Establecimientos(Seeder):
                 'ubicacion': generators.Ubicacion()
             }
         )
-        for establecimiento in faker.create(20):
+        for establecimiento in faker.create(5):
             print("Agregando Establecimiento: %s" % establecimiento)
             self.db.session.add(establecimiento)
 
