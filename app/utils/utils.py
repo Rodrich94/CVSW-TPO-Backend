@@ -97,7 +97,7 @@ def validar_datos_diagrama(data,fecha_inicio,fecha_fin):
 
 def verificar_EmpleadoID(empleado_id):
     # Verificar si el formato es correcto
-    if not re.match(r'^E\d{3}$', empleado_id):
+    if not re.match(r'^E\d{6}$', empleado_id):
         return False, f"El legajo del empleado '{empleado_id}' no es válido. Debe tener el formato 'E001'."
 
     # Verificar si el empleado existe

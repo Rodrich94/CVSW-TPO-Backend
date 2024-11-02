@@ -3,6 +3,8 @@ from ..models import Traslado, ActividadExtraordinaria, Empleado
 from ..utils.utils import validar_datos_traslado
 from .. import db  
 from sqlalchemy.orm import joinedload 
+
+
 def crear_traslado():
     data = request.get_json()
     
