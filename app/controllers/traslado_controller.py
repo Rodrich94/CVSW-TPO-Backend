@@ -68,6 +68,7 @@ def get_traslado(id):
                 'fecha_ini': traslado.actividad.fecha_ini,
                 'fecha_fin': traslado.actividad.fecha_fin,
                 'estado': traslado.actividad.estado,
+                'establecimiento': traslado.actividad.servicio.establecimiento.nombre,
                 'servicio_id': traslado.actividad.servicio.nombre,
                 'nombre_empleado': traslado.actividad.empleado.nombre,
                 'apellido_empleado': traslado.actividad.empleado.apellido,
