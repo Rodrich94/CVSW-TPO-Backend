@@ -117,7 +117,8 @@ def obtener_diagrama_por_id(diagrama_id):
         'fecha_fin': diagrama.fecha_fin.strftime('%Y-%m-%d'),
         'servicio': diagrama.servicio.nombre,
         'actividades_extraordinarias': [
-            {'id': actividad.id, 
+            {'id': actividad.id,
+             'tipo_actividad': 'guardia' if actividad.guardias else 'traslado' if actividad.traslado else 'desconocido', 
              'fecha_ini': actividad.fecha_ini.strftime('%Y-%m-%d'), 
              'fecha_fin': actividad.fecha_fin.strftime('%Y-%m-%d'),
              'estado': actividad.estado,
