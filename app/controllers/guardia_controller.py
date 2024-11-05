@@ -1,8 +1,8 @@
-from datetime import datetime
 from flask import request, jsonify
-from ..models import Guardia, ActividadExtraordinaria, Establecimiento, Servicio, Empleado
+from ..models import Guardia, ActividadExtraordinaria
 from .. import db
-from ..utils.utils import verificar_empleado, verificar_fechas, verificar_cupo_mensual, verificar_servicio, validar_tipo_guardia, validar_fechas_guardia, validar_duracion_guardia, verificar_cantidad_guardias
+from ..utils.utils import (verificar_empleado, verificar_fechas, verificar_cupo_mensual, verificar_servicio, validar_tipo_guardia, validar_fechas_guardia, validar_duracion_guardia, verificar_cantidad_guardias,
+                           validar_fecha_modificar_empleado_guardia, verificar_EmpleadoID, obtener_periodo_fecha, verificar_guardia, verificar_rol_empleados)
 
 def obtener_guardias():
     guardias = Guardia.query.all()
@@ -16,68 +16,6 @@ def obtener_guardias():
         'duracion': guardia.duracion,
         'tipo': guardia.tipo,
     } for guardia in guardias])
-
-def modificar_guardia():
-    # Se obtiene el json de la request entrante
-    inputs = request.get_json()
-    
-    # Se guardan los datos por los cuales se va a realizar la búsqueda
-    nombre_establecimiento = inputs.get('establecimiento') # Se asume que es un establecimiento válido, ya que es un formulario de selección
-    nombre_servicio = inputs.get('servicio') # Se asume que es un servicio válido sobre el establecimiento, ya que es un formulario de selección
-    tipo_guardia = inputs.get('tipoGuardia')  # Se asume que es un tipo de guardia válido, ya que es un formulario de selección
-    fecha_guardia = inputs.get('fechaGuardia') # Se asume que la fecha es de día actual en adelante
-    legajo_empleado = inputs.get('legajoEmpleado')
-    guardia_id = inputs.get('idGuardia') # Se asume que es una guardia existente, dado que se accede mediante selección/botón
-    ESTADO_ACTIVIDAD = "Pendiente"
-
-    servicio_establecimiento_filtrado = db.session.query((Servicio)).join(Establecimiento). \
-                                                          filter(Establecimiento.nombre == nombre_establecimiento,
-                                                                 Servicio.nombre == nombre_servicio).first()
-
-    print(f"[Establecimiento: {servicio_establecimiento_filtrado.establecimiento.nombre}, Servicio: {servicio_establecimiento_filtrado.nombre}]")
-
-    empleado_filtrado = db.session.query(Empleado).filter_by(legajo = legajo_empleado).first()
-    if empleado_filtrado:
-        guardias_pendientes = db.session.query(ActividadExtraordinaria.fecha_ini, ActividadExtraordinaria.fecha_fin, 
-                                               Empleado.nombre, Empleado.apellido, Empleado.legajo, Empleado.rol). \
-                                                select_from(Guardia).join(ActividadExtraordinaria).join(Empleado). \
-                                                filter(Guardia.tipo == tipo_guardia, 
-                                                       ActividadExtraordinaria.servicio_id == servicio_establecimiento_filtrado.id,
-                                                       ActividadExtraordinaria.fecha_ini == fecha_guardia,
-                                                       ActividadExtraordinaria.estado == ESTADO_ACTIVIDAD,
-                                                       ActividadExtraordinaria.legajo_empleado != empleado_filtrado.legajo)#. \
-                                                #all()
-
-        if guardias_pendientes: 
-            for guardia in guardias_pendientes:
-                print(f"""[Fecha inicio: {guardia.fecha_ini}, Fecha fin: {guardia.fecha_fin}, Nombre: {guardia.nombre}, Apellido: {guardia.apellido}]""") 
-
-            guardia_pendiente_seleccionada = guardias_pendientes.filter(ActividadExtraordinaria.id == guardia_id).first()
-            print(f"""Guardia seleccionada: [Fecha inicio: {guardia_pendiente_seleccionada.fecha_ini}, Fecha fin: {guardia_pendiente_seleccionada.fecha_fin}, Nombre: {guardia_pendiente_seleccionada.nombre}, Apellido: {guardia_pendiente_seleccionada.apellido}]""")
-
-            if guardia_pendiente_seleccionada.rol == empleado_filtrado.rol:
-                validacion, mensaje = verificar_fechas(guardia_pendiente_seleccionada.fecha_ini, 
-                                 guardia_pendiente_seleccionada.fecha_fin, 
-                                 empleado_filtrado.legajo)
-                if validacion:
-                    #print(guardia_pendiente_seleccionada.legajo)
-                    guardia_pendiente_seleccionada.legajo = empleado_filtrado.legajo
-                    #db.session.commit()
-                    #print(mensaje)
-                    return jsonify({"message": "Cambio de empleado en guardia se realizó correctamente", 
-                                    "guardia": str(guardia_pendiente_seleccionada)}), 200
-                else:
-                    return jsonify({"error": mensaje}), 400
-            else:
-                mensaje = "Rol no coincidente entre empleados."
-                #print("Rol no coincidente entre empleados.")
-        else:
-            mensaje = f"No existen guardias {tipo_guardia}s."
-            #print(f"No existen guardias {tipo_guardia}s.")
-    else:
-        mensaje = "Empleado inexistente."
-        #print("Empleado inexistente.")
-    return jsonify({"error": mensaje}), 400
 
 
 def crear_guardias():
@@ -183,3 +121,102 @@ def crear_guardias():
         'mensaje': 'Guardias creadas con éxito.',
         'cantidad_guardias': cantidad_guardias
     }), 201
+
+
+def obtener_guardias_por_servicio_tipo():  
+    """
+    Obtiene las guardias pendientes de un servicio de acuerdo al tipo, dada una fecha. Tambien recibe el legajo del empleado.
+    """
+    data = request.get_json()
+    servicio_id = data.get('servicio_id')
+    tipo = data.get('tipo')
+    fecha_inicio_guardia = data.get('fecha_guardia')
+    legajo = data.get('legajo_empleado')
+    ESTADO_GUARDIA_PENDIENTE = "Pendiente"
+
+    # INICIO Validaciones de datos
+    # Validación del servicio 
+    validacion_servicio, mensaje = verificar_servicio(servicio_id)
+    if not validacion_servicio:
+        return jsonify({'error': mensaje}), 404
+    
+    # Validación del tipo de guardia
+    validacion_tipo_guardia, mensaje = validar_tipo_guardia(tipo)
+    if not validacion_tipo_guardia:
+        return jsonify({'error': mensaje}), 400
+    
+    # Validación de la fecha_guardia de guardia ingresada
+    validacion_fecha, mensaje = validar_fecha_modificar_empleado_guardia(fecha_inicio_guardia)
+    if not validacion_fecha:
+        return jsonify({'error': mensaje}), 400
+    
+    # Verificamos que el empleado al que queremos asignar la guardia exista 
+    validacion_empleado, mensaje = verificar_EmpleadoID(legajo)
+    if not validacion_empleado:
+        return jsonify({'error': mensaje}), 400
+    
+    periodo_fecha_guardia, mensaje = obtener_periodo_fecha(fecha_inicio_guardia)
+    if not periodo_fecha_guardia:
+        return jsonify({'error': mensaje}), 400
+    
+    periodo_fecha_inicio = periodo_fecha_guardia[0]
+    periodo_fecha_fin = periodo_fecha_guardia[1]
+    #print(f"fecha_guardia: {fecha_guardia}, periodo_fecha_inicio: {periodo_fecha_inicio}, periodo_fecha_fin: {periodo_fecha_fin}")
+
+    validacion_cantidad_guardias_empleado, mensaje = verificar_cantidad_guardias(legajo, tipo, periodo_fecha_inicio, periodo_fecha_fin, 0.5)
+    if not validacion_cantidad_guardias_empleado:
+        return jsonify({'error': mensaje}), 400
+    # FIN Validaciones de datos
+
+    # Obtenemos las guardias pendientes de un servicio de acuerdo al tipo, dada una fecha
+    guardias = Guardia.query.join(ActividadExtraordinaria).filter(
+        ActividadExtraordinaria.servicio_id == servicio_id,
+        Guardia.tipo == tipo,
+        ActividadExtraordinaria.fecha_ini == fecha_inicio_guardia,
+        ActividadExtraordinaria.estado == ESTADO_GUARDIA_PENDIENTE,
+        ActividadExtraordinaria.legajo_empleado != legajo
+    ).all()
+
+    # Esta información será retornada al front, para visualizar y poder seleccionar la guardia
+    return jsonify([{
+        'id': guardia.id,
+        "fecha_inicio": guardia.actividad_extraordinaria.fecha_ini,
+        "fecha_fin": guardia.actividad_extraordinaria.fecha_fin,
+        "nombre": guardia.actividad_extraordinaria.empleado.nombre,
+        "apellido": guardia.actividad_extraordinaria.empleado.apellido,
+        'duracion': guardia.duracion,
+        'tipo': guardia.tipo,
+    } for guardia in guardias])
+
+
+def modificar_empleado_guardia(id_guardia):
+    data = request.get_json()
+    legajo_nuevo_empleado = data.get('legajo_empleado')
+
+    validacion_empleado, mensaje = verificar_EmpleadoID(legajo_nuevo_empleado)
+    if not validacion_empleado:
+        return jsonify({'error': mensaje}), 400
+
+    validacion_guardia, mensaje = verificar_guardia(id_guardia)
+    if not validacion_guardia:
+        return jsonify({'error': mensaje}), 404
+
+    guardia_seleccionada = Guardia.query.get(id_guardia)
+    legajo_empleado_actual = guardia_seleccionada.actividad_extraordinaria.legajo_empleado
+    rol_valido, mensaje = verificar_rol_empleados(legajo_empleado_actual, legajo_nuevo_empleado)
+    if not rol_valido:
+        return jsonify({"error": mensaje}), 400
+    
+    # Se verifica que no exista alguna superposición con licencias y/o actividades del nuevo empleado
+    fecha_inicio_guardia = str(guardia_seleccionada.actividad_extraordinaria.fecha_ini)
+    fecha_fin_guardia = str(guardia_seleccionada.actividad_extraordinaria.fecha_fin)
+    verificacion_fechas, error = verificar_fechas(fecha_inicio_guardia, fecha_fin_guardia, legajo_nuevo_empleado)
+    if not verificacion_fechas:
+        return jsonify({'error': error}), 400
+
+    guardia_seleccionada.actividad_extraordinaria.legajo_empleado = legajo_nuevo_empleado
+    db.session.commit()
+
+    return jsonify([{
+        'mensaje': f"La modificación de la guardia #{id_guardia} fue realizada correctamente. El empleado con legajo {legajo_empleado_actual} fue reemplezado en la guardia #{id_guardia}, por el empleado con legajo {legajo_nuevo_empleado}"
+    }]), 200
