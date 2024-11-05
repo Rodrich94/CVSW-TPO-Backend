@@ -155,14 +155,15 @@ def obtener_guardias_por_servicio_tipo():
     if not validacion_empleado:
         return jsonify({'error': mensaje}), 400
     
+    # Se obtiene el periodo de fechas a la cual pertenece la guardia
     periodo_fecha_guardia, mensaje = obtener_periodo_fecha(fecha_inicio_guardia)
     if not periodo_fecha_guardia:
         return jsonify({'error': mensaje}), 400
     
     periodo_fecha_inicio = periodo_fecha_guardia[0]
     periodo_fecha_fin = periodo_fecha_guardia[1]
-    #print(f"fecha_guardia: {fecha_guardia}, periodo_fecha_inicio: {periodo_fecha_inicio}, periodo_fecha_fin: {periodo_fecha_fin}")
 
+    # Se verifica que nuevo empleado no exceda la cantidad de guardias mensuales
     validacion_cantidad_guardias_empleado, mensaje = verificar_cantidad_guardias(legajo, tipo, periodo_fecha_inicio, periodo_fecha_fin, 0.5)
     if not validacion_cantidad_guardias_empleado:
         return jsonify({'error': mensaje}), 400
@@ -200,8 +201,24 @@ def modificar_empleado_guardia(id_guardia):
     validacion_guardia, mensaje = verificar_guardia(id_guardia)
     if not validacion_guardia:
         return jsonify({'error': mensaje}), 404
-
+    
     guardia_seleccionada = Guardia.query.get(id_guardia)
+    fecha_guardia_seleccionada = str(guardia_seleccionada.actividad_extraordinaria.fecha_ini)
+
+    periodo_fecha_guardia, mensaje = obtener_periodo_fecha(fecha_guardia_seleccionada)
+    if not periodo_fecha_guardia:
+        return jsonify({'error': mensaje}), 400
+    
+    periodo_fecha_inicio = periodo_fecha_guardia[0]
+    periodo_fecha_fin = periodo_fecha_guardia[1]
+    cantidad = int(guardia_seleccionada.duracion) / 24
+
+    # Contabilizamos la cantidad de guardias que tiene el nuevo empleado a asignar
+    validacion_cantidad_guardias_empleado, mensaje = verificar_cantidad_guardias(legajo_nuevo_empleado, guardia_seleccionada.tipo, periodo_fecha_inicio, periodo_fecha_fin, cantidad)
+    if not validacion_cantidad_guardias_empleado:
+        return jsonify({'error': mensaje}), 400
+
+    # Se verifica que ambos empleados tengan el mismo rol
     legajo_empleado_actual = guardia_seleccionada.actividad_extraordinaria.legajo_empleado
     rol_valido, mensaje = verificar_rol_empleados(legajo_empleado_actual, legajo_nuevo_empleado)
     if not rol_valido:

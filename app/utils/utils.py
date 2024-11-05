@@ -265,6 +265,7 @@ def validar_duracion_guardia(duracion):
 
 
 def validar_cantidad_guardias(tipo, cantidad):
+    tipo = tipo.lower()
     """
     Valida que la cantidad de guardias no exceda los límites.
     """
