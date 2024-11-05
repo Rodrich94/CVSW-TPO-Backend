@@ -402,3 +402,124 @@ def obtener_actividades_empleado(legajo_empleado, fecha_desde, fecha_hasta):
         })
 
     return actividades
+
+
+def validar_fecha_modificar_empleado_guardia(fecha):
+    """
+    Verifica que la fecha de guardia ingresada sea correcta.
+    """
+    try:
+        fecha = datetime.strptime(fecha, "%Y-%m-%d").date()
+        #if fecha > datetime.now().date():
+        #    return False, "La fecha no puede ser mayor a la actual."
+        #else:
+        #    return True, "Validación exitosa."
+        return True, "Validación exitosa."
+    except ValueError:
+        return False, "Formato de fecha de guardia inválido."
+    
+
+def obtener_periodo_fecha(fecha):
+    """
+    Dada una fecha previamente validada, obtiene el rango de fechas inicio y fin a partir de la misma.
+    """
+    try:
+        fecha = datetime.strptime(fecha, "%Y-%m-%d").date()
+        if (16 <= fecha.day <= 31):
+            inicio_periodo = fecha.replace(day=16)
+            fin_periodo = (fecha + relativedelta(months=1)).replace(day=15)
+        elif (1 <= fecha.day <= 15):
+            inicio_periodo = (fecha - relativedelta(months=1)).replace(day=16)
+            fin_periodo = fecha.replace(day=15)
+        else: 
+            return False, "Formato de fecha incorrecto."
+    except ValueError:
+        return False, "Formato de fecha incorrecto."
+    
+    periodo_fecha = [inicio_periodo, fin_periodo]
+    return periodo_fecha, "Operacion exitosa."
+
+
+def verificar_rol_empleados(legajo_empleado_actual, legajo_nuevo_empleado):
+    """
+    Verifica que ambos empleados posean el mismo rol.
+    """
+    empleado_actual = Empleado.query.filter_by(legajo=legajo_empleado_actual).first()
+    empleado_nuevo = Empleado.query.filter_by(legajo=legajo_nuevo_empleado).first()
+    
+    if empleado_actual.rol != empleado_nuevo.rol:
+        return False, "Los roles de ambos empleados deben coincidir."
+    else:
+        return True, "Validación exitosa."
+
+
+def verificar_guardia(guardia_id):
+    """
+    Verifica si la guardia existe mediante su ID.
+    """
+    guardia = Guardia.query.get(guardia_id)
+    if guardia is None:
+        return False, f"La guardia #{guardia_id} no existe."
+    elif guardia.actividad_extraordinaria.estado == "Realizada":
+        return False, "No se puede modificar una guardia con estado 'Realizada'."
+    else:
+        return True, "Validación de guardia exitosa."
+    
+
+def obtener_resumen_actividades_empleado(servicio_id, fecha_desde, fecha_hasta):
+    """
+    Obtiene el resumen de actividades por servicio en un rango de fechas.
+    """
+    resultados_resumen_servicio = []
+
+    # Obtener las actividades extraordinarias dentro del rango de fechas y servicio
+    actividades_extraordinarias = ActividadExtraordinaria.query.filter(
+        ActividadExtraordinaria.servicio_id == servicio_id,
+        ActividadExtraordinaria.fecha_ini >= fecha_desde,
+        ActividadExtraordinaria.fecha_fin <= fecha_hasta
+    ).all()
+
+    # Inicializar un diccionario para almacenar el resumen por empleado
+    resumen_empleados = {}
+
+    for actividad in actividades_extraordinarias:
+        legajo_empleado = actividad.legajo_empleado
+
+        if legajo_empleado not in resumen_empleados:
+            empleado = Empleado.query.filter_by(legajo=legajo_empleado).first()
+            resumen_empleados[legajo_empleado] = {
+                'nombre': empleado.nombre,
+                'apellido': empleado.apellido,
+                'dias_licencia': 0,
+                'cantidad_guardias': 0,
+                'cantidad_traslados': 0
+            }
+
+            # Contabilizar días de licencia
+            licencias = Licencia.query.filter(
+                Licencia.legajo_empleado == legajo_empleado,
+                Licencia.fecha_desde >= fecha_desde,
+                Licencia.fecha_hasta <= fecha_hasta
+            ).all()
+
+            for licencia in licencias:
+                resumen_empleados[legajo_empleado]['dias_licencia'] += (licencia.fecha_hasta - licencia.fecha_desde).days + 1
+
+        # Contabilizar guardias y traslados
+        if actividad.guardias:
+            resumen_empleados[legajo_empleado]['cantidad_guardias'] += 1
+        elif actividad.traslado:
+            resumen_empleados[legajo_empleado]['cantidad_traslados'] += 1
+
+    # Agregar el resumen al resultado final
+    for legajo_empleado, datos in resumen_empleados.items():
+        resultados_resumen_servicio.append({
+        'legajo_empleado': legajo_empleado,
+        'nombre': datos['nombre'],
+        'apellido': datos['apellido'],
+        'dias_licencia': datos['dias_licencia'],
+        'cantidad_guardias': datos['cantidad_guardias'],
+        'cantidad_traslados': datos['cantidad_traslados']
+        })
+
+    return resultados_resumen_servicio
