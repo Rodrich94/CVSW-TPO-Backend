@@ -2,7 +2,7 @@ from datetime import datetime
 from dateutil.relativedelta import relativedelta
 from sqlalchemy import case, func
 from flask import jsonify
-from app.models import ActividadExtraordinaria, Guardia, Traslado, Licencia, Empleado, CupoMensual, DiagramaMensual, Servicio
+from app.models import ActividadExtraordinaria, Guardia, Traslado, Licencia, Empleado, CupoMensual, DiagramaMensual, Servicio, Establecimiento
 from .. import db
 import re 
 
@@ -311,6 +311,9 @@ def obtener_actividades_empleado(legajo_empleado, fecha_desde, fecha_hasta):
             ActividadExtraordinaria,
             Guardia,
             Traslado,
+            Servicio,
+            Establecimiento,
+            Empleado,
             case((Traslado.id is None, 'Guardia'), else_='Traslado')
         ).join(
             Guardia,
@@ -320,6 +323,15 @@ def obtener_actividades_empleado(legajo_empleado, fecha_desde, fecha_hasta):
             Traslado,
             Traslado.id == ActividadExtraordinaria.id,
             isouter=True
+        ).join(
+            Servicio,
+            Servicio.id == ActividadExtraordinaria.servicio_id
+        ).join(
+            Establecimiento,
+            Establecimiento.id == Servicio.establecimiento_id
+        ).join(
+            Empleado,
+            Empleado.legajo == ActividadExtraordinaria.legajo_empleado
         ).filter(
             ActividadExtraordinaria.legajo_empleado == legajo_empleado,
             ActividadExtraordinaria.fecha_ini >= fecha_desde,
@@ -328,14 +340,34 @@ def obtener_actividades_empleado(legajo_empleado, fecha_desde, fecha_hasta):
     ).all()
 
     for tupla in resultado:
-        actividad, guardia, traslado, tipo = tupla
+        actividad, guardia, traslado, servicio, establecimiento, empleado, tipo = tupla
+
+        if guardia is not None:
+            detalle_actividad = {
+                'duracion': guardia.duracion,
+                'tipo': guardia.tipo,
+            }
+        else:
+            detalle_actividad = {
+                'origen': traslado.origen,
+                'destino': traslado.destino,
+                'tramo': traslado.tramo,
+            }
+
         actividades.append({
+            'legajo': empleado.legajo,
+            'nombre': empleado.nombre,
+            'apellido': empleado.apellido,
             'id': actividad.id,
-            'id_servicio': actividad.servicio_id,
+            'id_servicio': servicio.id,
+            'nombre_servicio': servicio.nombre,
+            'nombre_establecimiento': establecimiento.nombre,
+            'ubicacion_establecimiento': establecimiento.ubicacion,
             'fecha_ini': actividad.fecha_ini.strftime("%Y-%m-%d"),
             'fecha_fin': actividad.fecha_fin.strftime("%Y-%m-%d"),
             'estado': actividad.estado,
-            'tipo': tipo
+            'tipo': tipo,
+            'detalle': detalle_actividad,
         })
 
     return actividades
