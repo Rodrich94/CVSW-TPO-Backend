@@ -5,7 +5,9 @@ from .routerTraslado import router_traslado  # Otro ejemplo de blueprint
 from .routerDiagramaMensual import router_diagrama
 from .routerGuardia import router_guardia
 from .routerServicio import router_servicio
+from .routerActividades import router_actividades
 from .routerEstablecimiento import router_establecimiento
+
 
 def register_blueprints(app):
     """
@@ -16,5 +18,6 @@ def register_blueprints(app):
     app.register_blueprint(router_diagrama)
     app.register_blueprint(router_guardia)
     app.register_blueprint(router_servicio)
+    app.register_blueprint(router_actividades)
     app.register_blueprint(router_establecimiento)
 
