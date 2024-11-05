@@ -3,6 +3,8 @@ from ..models import Traslado, ActividadExtraordinaria, Empleado
 from ..utils.utils import validar_datos_traslado
 from .. import db  
 from sqlalchemy.orm import joinedload 
+
+
 def crear_traslado():
     data = request.get_json()
     
@@ -66,6 +68,7 @@ def get_traslado(id):
                 'fecha_ini': traslado.actividad.fecha_ini,
                 'fecha_fin': traslado.actividad.fecha_fin,
                 'estado': traslado.actividad.estado,
+                'establecimiento': traslado.actividad.servicio.establecimiento.nombre,
                 'servicio_id': traslado.actividad.servicio.nombre,
                 'nombre_empleado': traslado.actividad.empleado.nombre,
                 'apellido_empleado': traslado.actividad.empleado.apellido,
@@ -95,3 +98,19 @@ def eliminar_traslado(id):
     db.session.commit()
 
     return jsonify({"message": f"Traslado con ID {id} eliminado exitosamente"}), 200
+
+
+def get_traslados():
+    traslados = Traslado.query.all()
+    return jsonify([{
+        'id': traslado.id,
+        'origen': traslado.origen,       
+        'destino': traslado.destino,      
+        'tramo': traslado.tramo,
+        'actividad': {
+                'servicio_id': traslado.actividad.servicio.nombre,
+                'nombre_empleado': traslado.actividad.empleado.nombre,
+                'apellido_empleado': traslado.actividad.empleado.apellido,
+                'legajo_empleado': traslado.actividad.empleado.legajo
+            }
+    } for traslado in traslados])

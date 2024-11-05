@@ -16,9 +16,8 @@ def verificar_fechas(fecha_inicio, fecha_fin, empleado_legajo):
         fecha_fin_dt = datetime.strptime(fecha_fin, formato_fecha)
         
         # Verificar que fecha_inicio < fecha_fin
-        validacion_fecha, mensaje = validar_fechas(fecha_inicio_dt,fecha_fin_dt)
-        if not validacion_fecha:
-            return False, {mensaje}
+        if not fecha_inicio_dt < fecha_fin_dt:
+            return False, "La fecha de inicio debe ser menor a la de fin"
 
         # Validar si hay superposición de fechas con actividades extraordinarias
         actividades_existentes = ActividadExtraordinaria.query.filter(
@@ -28,7 +27,7 @@ def verificar_fechas(fecha_inicio, fecha_fin, empleado_legajo):
         ).all()
         
         if actividades_existentes:
-            return False, "El empleado ya tiene una actividad extraordinaria entre {fecha_inicio} y {fecha_fin}."
+            return False, f"El empleado ya tiene una actividad extraordinaria entre {fecha_inicio} y {fecha_fin}."
         
 
         # lógica para validar la licencia
@@ -60,7 +59,7 @@ def validar_datos_traslado(data):
     validacion_empleado, mensaje_empleado = verificar_EmpleadoID(data['empleado_id'])
     if not validacion_empleado:
         return False, mensaje_empleado
-
+    
     # Verificar el formato y rango de las fechas
     validacion_fechas, mensaje_fechas = verificar_fechas(data['fecha_inicio'], data['fecha_fin'], data['empleado_id'])
     if not validacion_fechas:
@@ -71,34 +70,52 @@ def validar_datos_traslado(data):
     if not validacion_tramo:
         return False, mensaje_tramo
 
+    # Validar que el servicio_id corresponde al empleado_id
+    if not verificar_servicio_empleado(data['empleado_id'], data['servicio_id']):
+        return False, f"El 'servicio_id' {data['servicio_id']} no corresponde al 'empleado_id' {data['empleado_id']}."
+
+
     return True, "Datos válidos"
 
 
-def validar_datos_diagrama(data):
+def validar_datos_diagrama(data,fecha_inicio,fecha_fin):
     # Verificar que los campos requeridos existan
-    campos_requeridos = ['fecha_inicio', 'fecha_fin', 'estado', 'servicio_id']
-    
+    campos_requeridos = ['mes', 'anio', 'servicio_id']
+  
     for campo in campos_requeridos:
         if campo not in data:
             return False, f"El campo '{campo}' es requerido."
 
     # Verificar que las fechas sean correctas
-    validacion_fechas, mensaje_fecha = validar_fechas(data['fecha_inicio'], data['fecha_fin'])
+    
+    validacion_fechas, mensaje_fecha = validar_mes_anio(data['mes'],data['anio'])
     if not validacion_fechas:
         return False, mensaje_fecha
     
     # Verificar que no exista diagrama en fechas
-    validacion_fechas, mensaje_diagrama = verificar_diagrama_existente(data['fecha_inicio'], data['fecha_fin'])
+    validacion_fechas, mensaje_diagrama = verificar_diagrama_existente(fecha_inicio, fecha_fin)
     if not validacion_fechas:
         return False, mensaje_diagrama
 
     # Retornar éxito si todas las validaciones pasan
     return True, "Datos del diagrama válidos"
 
+# Función para verificar si el servicio_id corresponde al empleado_id
+def verificar_servicio_empleado(empleado_id, servicio_id):
+    # Aquí debes consultar tu base de datos para obtener el servicio_id del empleado
+    empleado = db.session.query(Empleado).filter(Empleado.legajo == empleado_id).first()
+    
+    if empleado is None:
+        return False  # El empleado no existe
+
+    # Comparar el servicio_id del empleado con el proporcionado
+    return empleado.servicio_id == servicio_id
+
+
 def verificar_EmpleadoID(empleado_id):
     # Verificar si el formato es correcto
-    if not re.match(r'^E\d{3}$', empleado_id):
-        return False, f"El legajo del empleado '{empleado_id}' no es válido. Debe tener el formato 'E001'."
+    if not re.match(r'^E\d{1,6}$', empleado_id):
+        return False, f"El legajo del empleado '{empleado_id}' no es válido. Debe tener el formato 'E000001'. (7 digitos)"
 
     # Verificar si el empleado existe
     empleado = Empleado.query.filter_by(legajo=empleado_id).first()
@@ -111,7 +128,7 @@ def verificar_EmpleadoID(empleado_id):
 def verificar_tramo(tramo):
     tramos_validos = ['1', '2', '3']
     if tramo not in tramos_validos:
-        return False, f"El tramo '{tramo}' no es válido. Debe ser 1, 2 o 3."
+        return False, f"El tramo '{tramo}' no es válido. Debe ser 1 (100km - 180km), 2(181km - 360km) o 3 (mas de 360km)."
     
     return True, f"El tramo '{tramo}' es válido."
 
@@ -127,14 +144,26 @@ def convertir_fechas(fecha_ini_str, fecha_fin_str):
         return jsonify({"error": "Formato de fecha inválido"}), 400
     
 
-def validar_fechas(fecha_ini, fecha_fin):
+def validar_mes_anio(mes, anio):
     """
-    Verifica si la fecha de inicio es mayor que la fecha de fin.
+    Verifica que el mes esté entre 1 y 12 y que el año sea positivo.
     """
-    if fecha_ini > fecha_fin:
-        return False, "La fecha de inicio no puede ser mayor a la fecha de fin"
-    return True, "Las fechas son válidas"
+    try:
+        mes = int(mes)
+        anio = int(anio)
 
+        if mes < 1 or mes > 12:
+            return False, "El mes debe estar entre 1 y 12"
+        
+        if anio < 0:
+            return False, "El año debe ser un valor positivo"
+
+        return True, "El mes y el año son válidos"
+    
+    except ValueError:
+        return False, "El mes y el año deben ser enteros positivos"
+
+    
 def verificar_diagrama_existente(fecha_ini, fecha_fin):
     """
     Verifica si ya existe un diagrama en el rango de fechas especificado.
@@ -152,11 +181,13 @@ def buscar_actividades(fecha_ini, fecha_fin, servicio_id):
     """
     Busca actividades extraordinarias dentro del rango de fechas.
     """
+    print("fechas que llegan a busqueda",fecha_ini,fecha_fin,servicio_id)
     actividades = ActividadExtraordinaria.query.filter(
-        ActividadExtraordinaria.fecha_ini.between(fecha_ini, fecha_fin),
+        ActividadExtraordinaria.fecha_ini >= fecha_ini,
+        ActividadExtraordinaria.fecha_ini <= fecha_fin,
         ActividadExtraordinaria.servicio_id == servicio_id
     ).all()
-
+    print("Actividad",actividades)
     if not actividades:
         return jsonify({"error": "No se encontraron actividades extraordinarias en el rango de fechas"}), 404
 

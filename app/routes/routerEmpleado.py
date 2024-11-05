@@ -1,5 +1,5 @@
 from flask import Blueprint, jsonify
-from ..models import Empleado  
+from ..models import Empleado,Servicio  
 
 # Definir el Blueprint
 router_empleado = Blueprint('router_empleado', __name__)

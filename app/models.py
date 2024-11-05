@@ -121,7 +121,6 @@ class DiagramaMensual(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     fecha_ini = db.Column(db.Date, nullable=False)
     fecha_fin = db.Column(db.Date, nullable=False)
-    estado = db.Column(db.String(20), nullable=False)
 
     # Foreign Key a la tabla Servicio
     servicio_id = db.Column(db.Integer, db.ForeignKey('servicios.id'), nullable=False)
@@ -180,8 +179,8 @@ class Traslado(db.Model):
     __tablename__ = 'traslados'
     
     id = db.Column(db.Integer, db.ForeignKey('actividades_extraordinarias.id'), nullable=False, primary_key=True)
-    origen = db.Column(db.String(40), nullable=False)
-    destino = db.Column(db.String(40), nullable=False)   
+    origen = db.Column(db.String(100), nullable=False)
+    destino = db.Column(db.String(100), nullable=False)   
     tramo = db.Column(Enum('1', '2', '3', name='tramos_enum'), nullable=False)   #Solo se permiten 3 tramos según la especificacion
 
     actividad = db.relationship("ActividadExtraordinaria", backref="traslado", uselist=False)
