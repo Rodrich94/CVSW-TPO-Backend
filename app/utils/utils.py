@@ -27,7 +27,7 @@ def verificar_fechas(fecha_inicio, fecha_fin, empleado_legajo):
         ).all()
         
         if actividades_existentes:
-            return False, "El empleado ya tiene una actividad extraordinaria entre {fecha_inicio} y {fecha_fin}."
+            return False, f"El empleado ya tiene una actividad extraordinaria entre {fecha_inicio} y {fecha_fin}."
         
 
         # lógica para validar la licencia
@@ -59,7 +59,7 @@ def validar_datos_traslado(data):
     validacion_empleado, mensaje_empleado = verificar_EmpleadoID(data['empleado_id'])
     if not validacion_empleado:
         return False, mensaje_empleado
-
+    
     # Verificar el formato y rango de las fechas
     validacion_fechas, mensaje_fechas = verificar_fechas(data['fecha_inicio'], data['fecha_fin'], data['empleado_id'])
     if not validacion_fechas:
@@ -69,6 +69,11 @@ def validar_datos_traslado(data):
     validacion_tramo, mensaje_tramo = verificar_tramo(data['tramo'])
     if not validacion_tramo:
         return False, mensaje_tramo
+
+    # Validar que el servicio_id corresponde al empleado_id
+    if not verificar_servicio_empleado(data['empleado_id'], data['servicio_id']):
+        return False, f"El 'servicio_id' {data['servicio_id']} no corresponde al 'empleado_id' {data['empleado_id']}."
+
 
     return True, "Datos válidos"
 
@@ -95,10 +100,22 @@ def validar_datos_diagrama(data,fecha_inicio,fecha_fin):
     # Retornar éxito si todas las validaciones pasan
     return True, "Datos del diagrama válidos"
 
+# Función para verificar si el servicio_id corresponde al empleado_id
+def verificar_servicio_empleado(empleado_id, servicio_id):
+    # Aquí debes consultar tu base de datos para obtener el servicio_id del empleado
+    empleado = db.session.query(Empleado).filter(Empleado.legajo == empleado_id).first()
+    
+    if empleado is None:
+        return False  # El empleado no existe
+
+    # Comparar el servicio_id del empleado con el proporcionado
+    return empleado.servicio_id == servicio_id
+
+
 def verificar_EmpleadoID(empleado_id):
     # Verificar si el formato es correcto
-    if not re.match(r'^E\d{6}$', empleado_id):
-        return False, f"El legajo del empleado '{empleado_id}' no es válido. Debe tener el formato 'E001'."
+    if not re.match(r'^E\d{1,6}$', empleado_id):
+        return False, f"El legajo del empleado '{empleado_id}' no es válido. Debe tener el formato 'E000001'. (7 digitos)"
 
     # Verificar si el empleado existe
     empleado = Empleado.query.filter_by(legajo=empleado_id).first()
@@ -111,7 +128,7 @@ def verificar_EmpleadoID(empleado_id):
 def verificar_tramo(tramo):
     tramos_validos = ['1', '2', '3']
     if tramo not in tramos_validos:
-        return False, f"El tramo '{tramo}' no es válido. Debe ser 1, 2 o 3."
+        return False, f"El tramo '{tramo}' no es válido. Debe ser 1 (100km - 180km), 2(181km - 360km) o 3 (mas de 360km)."
     
     return True, f"El tramo '{tramo}' es válido."
 
@@ -164,11 +181,13 @@ def buscar_actividades(fecha_ini, fecha_fin, servicio_id):
     """
     Busca actividades extraordinarias dentro del rango de fechas.
     """
+    print("fechas que llegan a busqueda",fecha_ini,fecha_fin,servicio_id)
     actividades = ActividadExtraordinaria.query.filter(
-        ActividadExtraordinaria.fecha_ini.between(fecha_ini, fecha_fin),
+        ActividadExtraordinaria.fecha_ini >= fecha_ini,
+        ActividadExtraordinaria.fecha_ini <= fecha_fin,
         ActividadExtraordinaria.servicio_id == servicio_id
     ).all()
-
+    print("Actividad",actividades)
     if not actividades:
         return jsonify({"error": "No se encontraron actividades extraordinarias en el rango de fechas"}), 404
 

@@ -26,10 +26,8 @@ def crear_diagrama():
     mes = data.get('mes')
     anio = data.get('anio')
     servicio_id = data.get('servicio_id')
-
     # Ajustar fechas de inicio y fin al ciclo de 16 a 15 para el mes y año especificados
     fecha_ini, fecha_fin = ajustar_fechas_mes_diferido(mes, anio)
-
     # Validar los datos recibidos
     validacion, mensaje = validar_datos_diagrama(data,fecha_ini,fecha_fin)
     if not validacion:
@@ -133,43 +131,53 @@ def obtener_diagrama_por_id(diagrama_id):
 
 
 
-# Controlador para obtener diagramas filtrados
+# Método para obtener diagramas filtrados por mes y año
 def obtener_diagramas_filtrados():
-    fecha_inicio = request.args.get('fecha_inicio')
-    fecha_fin = request.args.get('fecha_fin')
-    estado = request.args.get('estado')
-    servicio_id = request.args.get('servicio_id')
+    mes = request.args.get('mes', type=int)
+    anio = request.args.get('anio', type=int)
+    servicio_id = request.args.get('servicio_id', type=int)
+    
+    # Validar mes y año
+    if not mes or not anio:
+        return jsonify({"error": "Mes y año son requeridos"}), 400
 
-    query = DiagramaMensual.query
-
-
-    if fecha_inicio:
-        query = query.filter(DiagramaMensual.fecha_ini >= fecha_inicio)
-
-    if fecha_fin:
-        query = query.filter(DiagramaMensual.fecha_fin <= fecha_fin)
-
- 
-    if estado:
-        query = query.filter(DiagramaMensual.estado == estado)
+    # Calcular las fechas de inicio y fin utilizando el método `ajustar_fechas_mes_diferido`
+    fecha_inicio, fecha_fin = ajustar_fechas_mes_diferido(mes, anio)
+    # Construir la consulta base
+    query = DiagramaMensual.query.filter(
+        DiagramaMensual.fecha_ini >= fecha_inicio,
+    )
 
     if servicio_id:
         query = query.filter(DiagramaMensual.servicio_id == servicio_id)
 
     diagramas = query.all()
 
+    # Formatear el resultado incluyendo datos de empleados y detalles del servicio y establecimiento
     resultado = []
     for diagrama in diagramas:
         resultado.append({
             'id': diagrama.id,
             'fecha_ini': diagrama.fecha_ini.strftime('%Y-%m-%d'),
             'fecha_fin': diagrama.fecha_fin.strftime('%Y-%m-%d'),
-            'servicio_id': diagrama.servicio_id,
+            'servicio': {
+                'id': diagrama.servicio_id,
+                'nombre': diagrama.servicio.nombre,
+                'establecimiento': diagrama.servicio.establecimiento.nombre
+            },
             'actividades_extraordinarias': [
-                {'id': actividad.id, 
-                 'fecha_ini': actividad.fecha_ini.strftime('%Y-%m-%d'), 
-                 'fecha_fin': actividad.fecha_fin.strftime('%Y-%m-%d'),
-                 'estado': actividad.estado} for actividad in diagrama.actividades_extraordinarias
+                {
+                    'id': actividad.id, 
+                    'fecha_ini': actividad.fecha_ini.strftime('%Y-%m-%d'), 
+                    'fecha_fin': actividad.fecha_fin.strftime('%Y-%m-%d'),
+                    'estado': actividad.estado,
+                    'empleado': {
+                        'legajo': actividad.empleado.legajo,
+                        'nombre': actividad.empleado.nombre,
+                        'apellido': actividad.empleado.apellido,
+                        'rol': actividad.empleado.rol
+                    },
+                } for actividad in diagrama.actividades_extraordinarias
             ]
         })
 

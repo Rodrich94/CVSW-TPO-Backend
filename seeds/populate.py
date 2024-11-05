@@ -25,9 +25,7 @@ class Servicios(Seeder):
         # IDs de establecimientos
         ids = self.db.session.query(Establecimiento.id).all()
         ids_establecimientos = [row[0] for row in ids]
-        servicios = ['Atención al Público', 'Clínica Médica', 'Enfermería',
-                     'Medicina General', 'Cardiología', 'Odontología',
-                     'Pediatría', 'Obstetricia', 'Radiología', 'Laboratorio']
+        servicios = ['Clínica Médica', 'Enfermería','Radiología', 'Laboratorio']
         for id_establecimiento in ids_establecimientos:
             for nombre_servicio in servicios:
                 servicio = Servicio(
@@ -72,9 +70,9 @@ class Traslados(Seeder):
         # Establecer la fecha de inicio en enero
         fecha_inicio_base = datetime(year=2024, month=1, day=1)
 
-        for i in range(30):  # Cambia el número según necesites
+        for i in range(200):  # Cambia el número según necesites
             # Calcular la fecha de inicio y fin
-            fecha_inicio = fecha_inicio_base + timedelta(days=i * 30)  # Aproximación de 30 días por mes
+            fecha_inicio = fecha_inicio_base + timedelta(days=i * 2)  # Aproximación de 30 días por mes
             fecha_fin = fecha_inicio + timedelta(days=1)  # La fecha de fin es un día después
 
             # Obtener el legajo del empleado aleatorio
@@ -96,18 +94,27 @@ class Traslados(Seeder):
 
             # Solo añadir el traslado si no hay conflictos
             if not actividad_existente and not licencia_vigente:
+                # Obtener el servicio_id asignado al empleado usando su legajo
+                empleado = Empleado.query.filter_by(legajo=legajo_empleado).first()
+                if not empleado:
+                    return {"error": "Empleado no encontrado"}, 404
+
+                # Crear la nueva actividad con el servicio_id del empleado
                 nueva_actividad = ActividadExtraordinaria(
                     fecha_ini=fecha_inicio.strftime('%Y-%m-%d'),
                     fecha_fin=fecha_fin.strftime('%Y-%m-%d'),
                     estado="Pendiente",
-                    servicio_id=random.choice(ids_servicios),
+                    servicio_id=empleado.servicio_id,  # Asignar el servicio_id del empleado
                     legajo_empleado=legajo_empleado
                 )
                 self.db.session.add(nueva_actividad)
                 self.db.session.flush()  # Para obtener el ID de la actividad
+
+                # Generar ubicaciones de origen y destino
                 origen_ubicacion = generators.Ubicacion().generate()
                 destino_ubicacion = generators.Ubicacion().generate()
-                # Ahora crear el traslado
+
+                # Crear el traslado asociado con la actividad
                 nuevo_traslado = Traslado(
                     id=nueva_actividad.id,  # El traslado comparte el ID de la actividad
                     origen=origen_ubicacion,
@@ -117,8 +124,9 @@ class Traslados(Seeder):
                 print("Agregando Traslado: %s" % nuevo_traslado)
                 self.db.session.add(nuevo_traslado)
 
-        # Guardar todos los cambios al final
-        self.db.session.commit()
+            # Confirmar la transacción
+            self.db.session.commit()
+
 
 
 
