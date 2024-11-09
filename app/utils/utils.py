@@ -340,20 +340,12 @@ def obtener_actividades_empleado(legajo_empleado, fecha_desde, fecha_hasta):
     resultado = (
         db.session.query(
             ActividadExtraordinaria,
-            Guardia,
-            Traslado,
             Servicio,
             Establecimiento,
             Empleado,
-            case((Traslado.id is None, 'Guardia'), else_='Traslado')
-        ).join(
             Guardia,
-            Guardia.id == ActividadExtraordinaria.id,
-            isouter=True
-        ).join(
             Traslado,
-            Traslado.id == ActividadExtraordinaria.id,
-            isouter=True
+            case((Traslado.id == None, 'Guardia'), else_='Traslado'),
         ).join(
             Servicio,
             Servicio.id == ActividadExtraordinaria.servicio_id
@@ -363,6 +355,14 @@ def obtener_actividades_empleado(legajo_empleado, fecha_desde, fecha_hasta):
         ).join(
             Empleado,
             Empleado.legajo == ActividadExtraordinaria.legajo_empleado
+        ).join(
+            Guardia,
+            Guardia.id == ActividadExtraordinaria.id,
+            isouter=True
+        ).join(
+            Traslado,
+            Traslado.id == ActividadExtraordinaria.id,
+            isouter=True
         ).filter(
             ActividadExtraordinaria.legajo_empleado == legajo_empleado,
             ActividadExtraordinaria.fecha_ini >= fecha_desde,
@@ -371,7 +371,7 @@ def obtener_actividades_empleado(legajo_empleado, fecha_desde, fecha_hasta):
     ).all()
 
     for tupla in resultado:
-        actividad, guardia, traslado, servicio, establecimiento, empleado, tipo = tupla
+        actividad, servicio, establecimiento, empleado, guardia, traslado, tipo = tupla
 
         if guardia is not None:
             detalle_actividad = {
