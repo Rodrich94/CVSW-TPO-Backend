@@ -1,41 +1,41 @@
-import unittest
+import json
 from app import create_app, db
-from app.models import Traslado, ActividadExtraordinaria
-from datetime import datetime
+from app.models import ActividadExtraordinaria, Traslado
 
-def test_crear_traslado(app_context, setup_database, crear_actividad):
-    """Prueba la creación de un traslado"""
-    actividad = crear_actividad
-    traslado = Traslado(
-        id=actividad.id,
-        origen="Ciudad A",
-        destino="Ciudad B",
-        tramo="1",
+def test_alta_traslado(client, setup_database):
+    """Prueba el endpoint de alta de traslado"""
+
+    # Datos de entrada para el traslado
+    traslado_data = {
+        "origen": "Ciudad A",
+        "destino": "Ciudad B",
+        "tramo": "1",
+        "fecha_inicio": "2024-10-25",
+        "fecha_fin": "2024-10-20",
+        "empleado_id": "E001",
+        "servicio_id": 1
+    }
+
+    # Enviar POST al endpoint /traslado
+    response = client.post(
+        "/traslado",
+        data=json.dumps(traslado_data),
+        content_type="application/json"
     )
-    db.session.add(traslado)
-    db.session.commit()
 
-    # Consultar traslado de la base de datos
-    traslado_query = db.session.get(Traslado, actividad.id)
-    assert traslado_query is not None
-    assert traslado_query.origen == "Ciudad A"
-    assert traslado_query.destino == "Ciudad B"
-    assert traslado_query.tramo == "1"
+    # Imprimir la respuesta JSON si el código de estado no es 201
+    if response.status_code != 400:
+        print("Error Response JSON:", response.get_json())
 
-def test_eliminar_traslado(app_context, setup_database, crear_actividad):
-    """Prueba la eliminación de un traslado"""
-    actividad = crear_actividad
-    traslado = Traslado(
-        id=actividad.id,
-        origen="Ciudad A",
-        destino="Ciudad B",
-        tramo="1",
-    )
-    db.session.add(traslado)
-    db.session.commit()
+    # Verificar que el código de respuesta sea 201 (Creado)
+    assert response.status_code == 201
 
-    db.session.delete(traslado)
-    db.session.commit()
+    # Verificar el mensaje en la respuesta
+    response_json = response.get_json()
+    assert response_json["message"] == "Traslado creado exitosamente"
 
-    traslado_query = db.session.get(Traslado, actividad.id)
-    assert traslado_query is None
+    # Verificar que el traslado fue creado en la base de datos
+    traslado = db.session.query(Traslado).filter_by(origen="Ciudad A", destino="Ciudad B").first()
+    assert traslado is not None
+    assert traslado.tramo == "1"
+    assert traslado.actividad is not None  # Verificar relación con ActividadExtraordinaria

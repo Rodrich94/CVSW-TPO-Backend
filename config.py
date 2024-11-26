@@ -1,4 +1,6 @@
 import os
+from dotenv import load_dotenv
+load_dotenv()
 
 class Config:
     """Configuraciones base comunes a todos los entornos"""
@@ -16,7 +18,10 @@ class DevelopmentConfig(Config):
 
 class TestingConfig(Config):
     """Configuraciones para pruebas"""
-    SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'  # Base de datos en memoria para pruebas
+    SQLALCHEMY_DATABASE_URI = (
+        f"mysql+pymysql://{os.getenv('DB_USERNAME_T')}:{os.getenv('DB_PASSWORD_T')}@"
+        f"{os.getenv('DB_HOST_T')}:{os.getenv('DB_PORT_T')}/{os.getenv('DB_NAME_T')}"
+    )
     TESTING = True
     DEBUG = False
 
