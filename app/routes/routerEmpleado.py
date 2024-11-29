@@ -15,3 +15,20 @@ def get_empleados():
         'rol': empleado.rol,
         'servicio': empleado.servicio.nombre
     } for empleado in empleados])
+
+
+@router_empleado.route('/empleado/<string:legajo>', methods=['GET'])
+def get_empleado(legajo):
+    empleado = Empleado.query.get(legajo)
+    if not empleado:
+        return jsonify({
+            'error': f'No existe el empleado ({legajo}).'
+        }), 404
+
+    return jsonify({
+        'legajo': empleado.legajo,
+        'nombre': empleado.nombre,
+        'apellido': empleado.apellido,
+        'rol': empleado.rol,
+        'servicio': empleado.servicio.nombre
+    }), 200
