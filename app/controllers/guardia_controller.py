@@ -44,6 +44,10 @@ def crear_guardias():
     if not empleado_valido:
         return jsonify({'error': error}), 400
 
+    # Verificar que se han recibido guardias
+    if not guardias:
+        return jsonify({'error': 'Lista de guardias para agregar vacía'}), 400
+
     # Datos para verificar cupo mensual y cantidad de guardias
     fecha_min = periodo[0]
     fecha_max = periodo[1]
