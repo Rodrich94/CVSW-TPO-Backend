@@ -4,10 +4,11 @@ from flask_seeder import FlaskSeeder
 from flask_migrate import Migrate
 from dotenv import load_dotenv
 import os
-from config import config  # Importa el archivo config.py
 
 # Cargar las variables de entorno desde el archivo .env
 load_dotenv()
+
+from config import config  # Importa el archivo config.py
 
 # Crear instancia de SQLAlchemy
 db = SQLAlchemy()
