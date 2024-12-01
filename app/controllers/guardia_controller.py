@@ -1,11 +1,26 @@
 from flask import request, jsonify
-from ..models import Guardia, ActividadExtraordinaria
+from sqlalchemy import desc
 from .. import db
-from ..utils.utils import (verificar_empleado, verificar_fechas, verificar_cupo_mensual, verificar_servicio, validar_tipo_guardia, validar_fechas_guardia, validar_duracion_guardia, verificar_cantidad_guardias,
-                           validar_fecha_modificar_empleado_guardia, verificar_EmpleadoID, obtener_periodo_fecha, verificar_guardia, verificar_rol_empleados)
+from ..models import ActividadExtraordinaria, Guardia
+from ..utils.utils import (
+    validar_tipo_guardia,
+    validar_fechas_guardia,
+    validar_duracion_guardia,
+    validar_fecha_modificar_empleado_guardia,
+    verificar_servicio,
+    verificar_empleado,
+    verificar_fechas,
+    verificar_cupo_mensual,
+    verificar_cantidad_guardias,
+    verificar_rol_empleados,
+    verificar_EmpleadoID,
+    verificar_guardia,
+    obtener_periodo_fecha,
+)
+
 
 def obtener_guardias():
-    guardias = Guardia.query.all()
+    guardias = Guardia.query.order_by(desc(Guardia.id)).all()
     return jsonify([{
         'id': guardia.id,
         'fechaInicio': guardia.actividad_extraordinaria.fecha_ini,
@@ -13,6 +28,8 @@ def obtener_guardias():
         'estado': guardia.actividad_extraordinaria.estado,
         'servicio': guardia.actividad_extraordinaria.servicio.nombre,
         'legajoEmpleado': guardia.actividad_extraordinaria.empleado.legajo,
+        'nombreEmpleado': guardia.actividad_extraordinaria.empleado.nombre,
+        'apellidoEmpleado': guardia.actividad_extraordinaria.empleado.apellido,
         'duracion': guardia.duracion,
         'tipo': guardia.tipo,
     } for guardia in guardias])
