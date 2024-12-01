@@ -21,7 +21,7 @@ def elimina_diagrama(diagrama_id):
     return eliminar_diagrama(diagrama_id)
 
 
-# Ruta para eliminar un diagrama
+# Ruta para obtener un diagrama
 @router_diagrama.route('/diagrama/<int:diagrama_id>', methods=['GET'])
 def obtener_diagrama(diagrama_id):
     return obtener_diagrama_por_id(diagrama_id)
