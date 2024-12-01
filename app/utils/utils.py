@@ -346,7 +346,7 @@ def obtener_actividades_empleado(legajo_empleado, fecha_desde, fecha_hasta):
             Servicio,
             Establecimiento,
             Empleado,
-            case((Traslado.id is None, 'Guardia'), else_='Traslado')
+            case((Traslado.id == None, 'Guardia'), else_='Traslado')
         ).join(
             Guardia,
             Guardia.id == ActividadExtraordinaria.id,
