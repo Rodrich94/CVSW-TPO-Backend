@@ -54,6 +54,11 @@ def validar_datos_traslado(data):
     for campo in campos_requeridos:
         if campo not in data:
             return False, f"El campo '{campo}' es requerido."
+        
+    if 'servicio_id' in data:
+        servicio_id = int(data['servicio_id'])
+        if servicio_id < 0:
+            return False, f"El 'servicio_id' debe ser un número positivo"
 
     # Verificar que el empleado tenga el formato correcto y exista
     validacion_empleado, mensaje_empleado = verificar_EmpleadoID(data['empleado_id'])
@@ -181,7 +186,6 @@ def buscar_actividades(fecha_ini, fecha_fin, servicio_id):
     """
     Busca actividades extraordinarias dentro del rango de fechas.
     """
-    print("fechas que llegan a busqueda",fecha_ini,fecha_fin,servicio_id)
     actividades = ActividadExtraordinaria.query.filter(
         ActividadExtraordinaria.fecha_ini >= fecha_ini,
         ActividadExtraordinaria.fecha_ini <= fecha_fin,

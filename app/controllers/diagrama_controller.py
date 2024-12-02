@@ -1,21 +1,29 @@
 from flask import request, jsonify
 from ..models import DiagramaMensual, ActividadExtraordinaria, ActividadDiagrama, db
 from ..utils.utils import validar_datos_diagrama,buscar_actividades
-from datetime import datetime
+from datetime import date
 from dateutil.relativedelta import relativedelta
 
 
 def ajustar_fechas_mes_diferido(mes, anio):
     try:
-
+        # Validar si mes y anio son valores válidos
+        if not isinstance(mes, int) or not isinstance(anio, int):
+            raise ValueError("Formato de mes y año no es valido, deben ser enteros y positivos.")
+        if mes < 1 or mes > 12:
+            raise ValueError("El mes debe estar entre 1 y 12.")
+        if anio <= 0:
+            raise ValueError("El año debe ser un número entero positivo.")
+        
         # Establecer la fecha de inicio al 16 del mes y año especificados
-        fecha_ini = datetime(anio, mes, 16)
+        fecha_ini = date(anio, mes, 16)  # Usar date en lugar de datetime
         
         # Calcular la fecha de fin como el 15 del mes siguiente
-        fecha_fin = (fecha_ini + relativedelta(months=1)).replace(day=15)
+        fecha_fin = (fecha_ini + relativedelta(months=1)).replace(day=15)  # `fecha_fin` ya es un `date`
+        
         return fecha_ini, fecha_fin
-    except ValueError:
-        return jsonify({"error": "Formato de mes y año no es valido, deben ser enteros y positivos"}), 400    
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
         
 
 # Controlador para crear un nuevo diagrama
@@ -72,6 +80,7 @@ def obtener_diagramas():
             'fecha_ini': diagrama.fecha_ini.strftime('%Y-%m-%d'),
             'fecha_fin': diagrama.fecha_fin.strftime('%Y-%m-%d'),
             'servicio': diagrama.servicio.nombre,
+            'establecimiento': diagrama.servicio.establecimiento.nombre,
             'actividades_extraordinarias': [
                 {
                     'id': actividad.id, 
@@ -114,6 +123,7 @@ def obtener_diagrama_por_id(diagrama_id):
         'fecha_ini': diagrama.fecha_ini.strftime('%Y-%m-%d'),
         'fecha_fin': diagrama.fecha_fin.strftime('%Y-%m-%d'),
         'servicio': diagrama.servicio.nombre,
+        'establecimiento': diagrama.servicio.establecimiento.nombre,
         'actividades_extraordinarias': [
             {'id': actividad.id,
              'tipo_actividad': 'guardia' if actividad.guardias else 'traslado' if actividad.traslado else 'desconocido', 
@@ -130,19 +140,35 @@ def obtener_diagrama_por_id(diagrama_id):
 
 
 
-
 # Método para obtener diagramas filtrados por mes y año
 def obtener_diagramas_filtrados():
     mes = request.args.get('mes', type=int)
     anio = request.args.get('anio', type=int)
     servicio_id = request.args.get('servicio_id', type=int)
+
+    # Imprimir los parámetros recibidos para depurar
+    print(f"Mes: {mes}, Año: {anio}, Servicio ID: {servicio_id}")
     
     # Validar mes y año
     if not mes or not anio:
         return jsonify({"error": "Mes y año son requeridos"}), 400
+    
+    # Validar año positivo
+    if anio <= 0:
+        return jsonify({"error": "El año debe ser un valor positivo"}), 400
+    
+    # Validar año positivo
+    if mes <= 0:
+        return jsonify({"error": "El mes debe ser un valor positivo"}), 400
 
     # Calcular las fechas de inicio y fin utilizando el método `ajustar_fechas_mes_diferido`
     fecha_inicio, fecha_fin = ajustar_fechas_mes_diferido(mes, anio)
+
+    # Verificar que las fechas sean válidas
+    if not isinstance(fecha_inicio, date) or not isinstance(fecha_fin, date):
+        return jsonify({"error": "Fechas generadas son inválidas"}), 400
+
+
     # Construir la consulta base
     query = DiagramaMensual.query.filter(
         DiagramaMensual.fecha_ini >= fecha_inicio,
@@ -153,32 +179,27 @@ def obtener_diagramas_filtrados():
 
     diagramas = query.all()
 
-    # Formatear el resultado incluyendo datos de empleados y detalles del servicio y establecimiento
+    # Formatear el resultado
     resultado = []
     for diagrama in diagramas:
         resultado.append({
             'id': diagrama.id,
             'fecha_ini': diagrama.fecha_ini.strftime('%Y-%m-%d'),
             'fecha_fin': diagrama.fecha_fin.strftime('%Y-%m-%d'),
-            'servicio': {
-                'id': diagrama.servicio_id,
-                'nombre': diagrama.servicio.nombre,
-                'establecimiento': diagrama.servicio.establecimiento.nombre
-            },
+            'servicio': diagrama.servicio.nombre,
+            'servicio_id': diagrama.servicio.id,
+            'establecimiento': diagrama.servicio.establecimiento.nombre,
             'actividades_extraordinarias': [
                 {
                     'id': actividad.id, 
                     'fecha_ini': actividad.fecha_ini.strftime('%Y-%m-%d'), 
                     'fecha_fin': actividad.fecha_fin.strftime('%Y-%m-%d'),
                     'estado': actividad.estado,
-                    'empleado': {
-                        'legajo': actividad.empleado.legajo,
-                        'nombre': actividad.empleado.nombre,
-                        'apellido': actividad.empleado.apellido,
-                        'rol': actividad.empleado.rol
-                    },
+                    'nombre_empleado': actividad.empleado.nombre,
+                    'apellido_empleado': actividad.empleado.apellido,
+                    'legajo_empleado': actividad.empleado.legajo,
+                    'tipo_actividad': 'guardia' if actividad.guardias else 'traslado' if actividad.traslado else 'desconocido'
                 } for actividad in diagrama.actividades_extraordinarias
             ]
         })
-
     return jsonify(resultado), 200
