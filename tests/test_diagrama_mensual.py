@@ -4,6 +4,26 @@ from app.models import Establecimiento, DiagramaMensual, ActividadDiagrama
 import pytest
 from datetime import date
 
+def test_sin_establecimientos(client):
+    """Camino 1. Lista vacía de establecimientos."""
+    response = client.get('/establecimientos')
+    assert response.status_code == 200
+    assert response.get_json() == [] 
+
+
+def test_sin_servicios_en_establecimiento(client, setup_database_sin_serv, app):
+    """Camino 2. Lista vacía de servicios."""
+    # Hacer una solicitud al endpoint
+    response = client.get('/establecimientos/1/servicios')
+    assert response.status_code == 200  # Código de estado esperado
+    assert response.get_json() == []  # Respuesta esperada
+
+    # Verificar en la base de datos que no hay servicios
+    with app.app_context():
+        establecimiento = Establecimiento.query.get(1)  # Obtener el establecimiento por ID
+        assert establecimiento is not None
+        assert len(establecimiento.servicios) == 0  # Confirmar que no tiene servicios
+
 @pytest.mark.parametrize(
     "data, expected_error",
     [
@@ -34,60 +54,9 @@ def test_error_dato_diagrama(client, setup_traslados, setup_database, expected_e
     assert response_data["error"] == expected_error
 
 
-@pytest.mark.parametrize(
-    "mes, anio, servicio_id, expected_status, expected_error",
-    [
-        # Casos inválidos para mes y año
-        (13, 2024, 2, 400, "Fechas generadas son inválidas"),  # Mes inválido
-        (0, 2023, 2, 400, "Mes y año son requeridos"),    # Mes inválido
-        (1, -2023, 2, 400, "El año debe ser un valor positivo"),  # Año inválido
-        (5, -2023, 2, 400, "El año debe ser un valor positivo"),  # Año inválido
-        (1, "asdasd", 2, 400, "Mes y año son requeridos"),  # Año no entero
-        ("asdasdasd", 2024, 2, 400, "Mes y año son requeridos"),  # Mes no entero
-    ]
-)
-def test_obtener_diagramas_filtrados_error(client, mes, anio, servicio_id, expected_status, expected_error):
-    """
-    Camino 3. Prueba para verificar que se devuelven errores cuando los parámetros mes y año son incorrectos.
-    """
-    response = client.get(
-        "/diagramas/filtrados",
-        query_string={"mes": mes, "anio": anio, "servicio_id": servicio_id}
-    )
-
-    # Verificar que la respuesta sea el código de estado esperado
-    assert response.status_code == expected_status
-
-    # Verificar que el error devuelto sea el esperado
-    response_data = response.get_json()
-    assert "error" in response_data
-    assert response_data["error"] == expected_error
-
-
-def test_sin_establecimientos(client):
-    """Camino 1. Lista vacía de establecimientos."""
-    response = client.get('/establecimientos')
-    assert response.status_code == 200
-    assert response.get_json() == [] 
-
-
-def test_sin_servicios_en_establecimiento(client, setup_database_sin_serv, app):
-    """Camino 2. Lista vacía de servicios."""
-    # Hacer una solicitud al endpoint
-    response = client.get('/establecimientos/1/servicios')
-    assert response.status_code == 200  # Código de estado esperado
-    assert response.get_json() == []  # Respuesta esperada
-
-    # Verificar en la base de datos que no hay servicios
-    with app.app_context():
-        establecimiento = Establecimiento.query.get(1)  # Obtener el establecimiento por ID
-        assert establecimiento is not None
-        assert len(establecimiento.servicios) == 0  # Confirmar que no tiene servicios
-
-
 def test_alta_diagrama_mensual(client, setup_traslados, setup_database, app):
     """
-    Camino 5. Prueba para verificar el alta de un diagrama mensual con datos válidos
+    Camino 4. Prueba para verificar el alta de un diagrama mensual con datos válidos
     y su obtención mediante el endpoint correspondiente.
     """
     # Datos válidos para crear un diagrama mensual
@@ -139,7 +108,41 @@ def test_alta_diagrama_mensual(client, setup_traslados, setup_database, app):
         assert len(actividades_asociadas) > 0  # Asegurarse de que hay actividades asociadas
 
 
+@pytest.mark.parametrize(
+    "mes, anio, servicio_id, expected_status, expected_error",
+    [
+        # Casos inválidos para mes y año
+        (13, 2024, 2, 400, "Fechas generadas son inválidas"),  # Mes inválido
+        (0, 2023, 2, 400, "Mes y año son requeridos"),    # Mes inválido
+        (1, -2023, 2, 400, "El año debe ser un valor positivo"),  # Año inválido
+        (5, -2023, 2, 400, "El año debe ser un valor positivo"),  # Año inválido
+        (1, "asdasd", 2, 400, "Mes y año son requeridos"),  # Año no entero
+        ("asdasdasd", 2024, 2, 400, "Mes y año son requeridos"),  # Mes no entero
+    ]
+)
+def test_obtener_diagramas_filtrados_error(client, mes, anio, servicio_id, expected_status, expected_error):
+    """
+    Camino 3. Prueba para verificar que se devuelven errores cuando los parámetros mes y año son incorrectos.
+    """
+    response = client.get(
+        "/diagramas/filtrados",
+        query_string={"mes": mes, "anio": anio, "servicio_id": servicio_id}
+    )
+
+    # Verificar que la respuesta sea el código de estado esperado
+    assert response.status_code == expected_status
+
+    # Verificar que el error devuelto sea el esperado
+    response_data = response.get_json()
+    assert "error" in response_data
+    assert response_data["error"] == expected_error
+
+
+
 def test_obtener_diagramas_filtrados(client, setup_datos_diagramas):
+    """
+    Camino 4. Prueba para verificar que se devuelven errores cuando los parámetros mes y año son incorrectos.
+    """
     response = client.get(
         "/diagramas/filtrados",
         query_string={"mes": 9, "anio": 2024, "servicio_id": 2}

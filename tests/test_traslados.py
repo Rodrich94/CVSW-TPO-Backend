@@ -82,7 +82,7 @@ import json
 )
 def test_crear_traslado_parametrizado(client, setup_database, traslado_data, expected_status, expected_error):
     """
-    Prueba parametrizada para el endpoint de creación de traslado.
+    Camino 5. Prueba parametrizada para el endpoint de creación de traslado.
     """
     response = client.post(
         "/traslado",
@@ -105,7 +105,7 @@ def test_crear_traslado_parametrizado(client, setup_database, traslado_data, exp
 
 
 def test_sin_establecimientos(client):
-    """Camino 2. Lista vacía de establecimientos."""
+    """Camino 1. Lista vacía de establecimientos."""
     response = client.get('/establecimientos')
     assert response.status_code == 200
     assert response.get_json() == [] 
@@ -113,7 +113,7 @@ def test_sin_establecimientos(client):
 
 def test_sin_servicios_en_establecimiento(client, setup_database_sin_serv,app):
 
-    """Camino 3. Lista vacía de servicios."""
+    """Camino 2. Lista vacía de servicios."""
 
     # Hacer una solicitud al endpoint
     response = client.get('/establecimientos/1/servicios')
@@ -136,7 +136,7 @@ def test_establecimiento_invalido(client):
 
 
 def test_obtener_servicio_sin_empleados(client, setup_database):
-    """Camino 4. Lista vacía de empleados para el servicio seleccionado."""
+    """Camino 3. Lista vacía de empleados para el servicio seleccionado."""
 
     # Hacer una solicitud GET al endpoint /servicios/1/empleados
     response = client.get('/servicios/1/empleados')
@@ -155,7 +155,7 @@ def test_obtener_servicio_sin_empleados(client, setup_database):
 
 def test_sin_empleados_para_servicio(client, setup_database):
 
-    """Camino 4. Error al registrar guardias."""
+    """Camino 4. Error al registrar traslado."""
 
     traslado_data = {
         "origen": "Ciudad A",

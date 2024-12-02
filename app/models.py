@@ -187,12 +187,13 @@ class Traslado(db.Model):
 
     def __repr__(self):
         return f"<Traslado {self.id} - {self.origen} - {self.destino} - {self.tramo}>"
-
+'''
 @click.command(name='init')
 @with_appcontext
 def init_db():
     db.drop_all()
     db.create_all()
+
 
 @click.command(name='populate')
 @with_appcontext
@@ -225,3 +226,4 @@ def populate_db():
     db.session.commit()
     
     print("Datos poblados exitosamente")
+'''

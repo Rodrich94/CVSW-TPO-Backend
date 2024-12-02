@@ -31,9 +31,9 @@ def create_app(config_name=None):
     from .routes import register_blueprints
     register_blueprints(app)
 
-    # Registrar comandos personalizados
+    '''# Registrar comandos personalizados
     from .models import init_db, populate_db
     app.cli.add_command(init_db)
-    app.cli.add_command(populate_db)
+    app.cli.add_command(populate_db)'''
 
     return app
