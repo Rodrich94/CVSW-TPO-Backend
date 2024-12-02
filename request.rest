@@ -2,15 +2,37 @@ GET http://localhost:5000/guardias
 
 ###
 
-PUT http://localhost:5000/guardias
+#GET http://localhost:5000/guardias/servicio-tipo
+#Content-Type: application/json
+
+#{
+#    "servicio_id": "1",
+#    "tipo": "Activa",
+#    "fecha_guardia": "2024-11-09",
+#    "legajo_empleado": "E002"
+#}
+
+GET http://localhost:5000/guardias/servicio-tipo/1/activa?legajo_empleado=E002&fecha_guardia=2024-11-09
+Content-Type: application/json
+
+###
+
+PUT http://localhost:5000/guardia/cambiar-empleado/15
 Content-Type: application/json
 
 {
-    "establecimiento": "unEstablecimiento",
-    "servicio": "unServicio",
-    "tipoGuardia": "Activa",
-    "fechaGuardia": "2024-10-15",
-    "legajoEmpleado": "E002",
-    "idGuardia": 3,
-    "hola": "asd"
+    "legajo_empleado": "E002"
 }
+
+###
+
+#GET http://localhost:5000/actividades/servicio/1
+#Content-Type: application/json
+
+#{
+#    "fecha_desde": "2024-11-01",
+#    "fecha_hasta": "2024-11-30"
+#}
+
+GET http://localhost:5000/actividades/servicio/1?fecha_desde=2024-11-01&fecha_hasta=2024-11-30
+Content-Type: application/json

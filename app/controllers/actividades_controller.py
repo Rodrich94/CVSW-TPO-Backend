@@ -30,7 +30,7 @@ def obtener_resumen_actividades_por_servicio(id_servicio):
     """
     Resumen de actividades por servicio.
     """
-    data = request.get_json()
+    data = request.args
     fecha_desde = data.get('fecha_desde')
     fecha_hasta = data.get('fecha_hasta')
 

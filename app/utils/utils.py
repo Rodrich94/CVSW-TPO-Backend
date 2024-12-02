@@ -477,44 +477,53 @@ def obtener_resumen_actividades_empleado(servicio_id, fecha_desde, fecha_hasta):
     """
     resultados_resumen_servicio = []
 
-    # Obtener las actividades extraordinarias dentro del rango de fechas y servicio
-    actividades_extraordinarias = ActividadExtraordinaria.query.filter(
-        ActividadExtraordinaria.servicio_id == servicio_id,
-        ActividadExtraordinaria.fecha_ini >= fecha_desde,
-        ActividadExtraordinaria.fecha_fin <= fecha_hasta
-    ).all()
+    # Obtener empleados del servicio
+    empleados_servicio = Empleado.query.filter(Empleado.servicio_id == servicio_id).all()
 
     # Inicializar un diccionario para almacenar el resumen por empleado
     resumen_empleados = {}
 
-    for actividad in actividades_extraordinarias:
-        legajo_empleado = actividad.legajo_empleado
+    for empleado in empleados_servicio:
+        legajo_empleado = empleado.legajo
 
         if legajo_empleado not in resumen_empleados:
-            empleado = Empleado.query.filter_by(legajo=legajo_empleado).first()
             resumen_empleados[legajo_empleado] = {
                 'nombre': empleado.nombre,
                 'apellido': empleado.apellido,
                 'dias_licencia': 0,
-                'cantidad_guardias': 0,
+                'cantidad_guardias_activas': 0,
+                'cantidad_guardias_pasivas': 0,
                 'cantidad_traslados': 0
             }
 
-            # Contabilizar días de licencia
-            licencias = Licencia.query.filter(
-                Licencia.legajo_empleado == legajo_empleado,
-                Licencia.fecha_desde >= fecha_desde,
-                Licencia.fecha_hasta <= fecha_hasta
-            ).all()
+        # Contabilizar días de licencia
+        licencias = Licencia.query.filter(
+            Licencia.legajo_empleado == legajo_empleado,
+            Licencia.fecha_desde >= fecha_desde,
+            Licencia.fecha_hasta <= fecha_hasta
+        ).all()
 
-            for licencia in licencias:
-                resumen_empleados[legajo_empleado]['dias_licencia'] += (licencia.fecha_hasta - licencia.fecha_desde).days + 1
+        for licencia in licencias:
+            resumen_empleados[legajo_empleado]['dias_licencia'] += (licencia.fecha_hasta - licencia.fecha_desde).days + 1
 
-        # Contabilizar guardias y traslados
-        if actividad.guardias:
-            resumen_empleados[legajo_empleado]['cantidad_guardias'] += 1
-        elif actividad.traslado:
-            resumen_empleados[legajo_empleado]['cantidad_traslados'] += 1
+        # Obtener las actividades extraordinarias del empleado dentro del rango de fechas
+        actividades_extraordinarias_empleado = ActividadExtraordinaria.query.filter(
+            ActividadExtraordinaria.legajo_empleado == empleado.legajo,
+            ActividadExtraordinaria.servicio_id == servicio_id,
+            ActividadExtraordinaria.fecha_ini >= fecha_desde,
+            ActividadExtraordinaria.fecha_fin <= fecha_hasta
+        ).all()
+
+        for actividad in actividades_extraordinarias_empleado:
+            # Contabilizar guardias y traslados
+            if actividad.guardias:
+                tipo_guardia = actividad.guardias[0].tipo.lower()
+                if tipo_guardia == "activa": 
+                    resumen_empleados[legajo_empleado]['cantidad_guardias_activas'] += 1
+                elif tipo_guardia == "pasiva":
+                    resumen_empleados[legajo_empleado]['cantidad_guardias_pasivas'] += 1
+            elif actividad.traslado:
+                resumen_empleados[legajo_empleado]['cantidad_traslados'] += 1
 
     # Agregar el resumen al resultado final
     for legajo_empleado, datos in resumen_empleados.items():
@@ -523,7 +532,8 @@ def obtener_resumen_actividades_empleado(servicio_id, fecha_desde, fecha_hasta):
         'nombre': datos['nombre'],
         'apellido': datos['apellido'],
         'dias_licencia': datos['dias_licencia'],
-        'cantidad_guardias': datos['cantidad_guardias'],
+        'cantidad_guardias_activas': datos['cantidad_guardias_activas'],
+        'cantidad_guardias_pasivas': datos['cantidad_guardias_pasivas'],
         'cantidad_traslados': datos['cantidad_traslados']
         })
 

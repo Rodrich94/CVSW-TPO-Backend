@@ -144,15 +144,13 @@ def crear_guardias():
     }), 201
 
 
-def obtener_guardias_por_servicio_tipo():  
+def obtener_guardias_por_servicio_tipo(servicio_id, tipo):  
     """
     Obtiene las guardias pendientes de un servicio de acuerdo al tipo, dada una fecha. Tambien recibe el legajo del empleado.
     """
-    data = request.get_json()
-    servicio_id = data.get('servicio_id')
-    tipo = data.get('tipo')
-    fecha_inicio_guardia = data.get('fecha_guardia')
+    data = request.args
     legajo = data.get('legajo_empleado')
+    fecha_inicio_guardia = data.get('fecha_guardia')
     ESTADO_GUARDIA_PENDIENTE = "Pendiente"
 
     # INICIO Validaciones de datos
@@ -202,12 +200,14 @@ def obtener_guardias_por_servicio_tipo():
     # Esta información será retornada al front, para visualizar y poder seleccionar la guardia
     return jsonify([{
         'id': guardia.id,
-        "fecha_inicio": guardia.actividad_extraordinaria.fecha_ini,
-        "fecha_fin": guardia.actividad_extraordinaria.fecha_fin,
+        "fechaInicio": guardia.actividad_extraordinaria.fecha_ini,
+        "fechaFin": guardia.actividad_extraordinaria.fecha_fin,
+        "legajoEmpleado": guardia.actividad_extraordinaria.empleado.legajo,
         "nombre": guardia.actividad_extraordinaria.empleado.nombre,
         "apellido": guardia.actividad_extraordinaria.empleado.apellido,
         'duracion': guardia.duracion,
         'tipo': guardia.tipo,
+        'estado': guardia.actividad_extraordinaria.estado
     } for guardia in guardias])
 
 
@@ -257,4 +257,4 @@ def modificar_empleado_guardia(id_guardia):
 
     return jsonify([{
         'mensaje': f"La modificación de la guardia #{id_guardia} fue realizada correctamente. El empleado con legajo {legajo_empleado_actual} fue reemplezado en la guardia #{id_guardia}, por el empleado con legajo {legajo_nuevo_empleado}"
-    }]), 200
+    }]), 201

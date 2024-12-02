@@ -11,9 +11,9 @@ def listar_guardias():
 def agregar_guardias():
     return crear_guardias()
 
-@router_guardia.route('/guardias/servicio-tipo', methods=['GET'])
-def listar_guardias_por_servicio_tipo():
-    return obtener_guardias_por_servicio_tipo()
+@router_guardia.route('/guardias/servicio-tipo/<int:id_servicio>/<string:tipo>', methods=['GET'])
+def listar_guardias_por_servicio_tipo(id_servicio, tipo):
+    return obtener_guardias_por_servicio_tipo(id_servicio, tipo)
 
 @router_guardia.route('/guardia/cambiar-empleado/<int:id_guardia>', methods=['PUT'])
 def cambio_empleado_en_guardia(id_guardia):
