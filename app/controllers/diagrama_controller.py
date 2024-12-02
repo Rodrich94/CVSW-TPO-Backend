@@ -8,8 +8,6 @@ from dateutil.relativedelta import relativedelta
 def ajustar_fechas_mes_diferido(mes, anio):
     try:
         # Validar si mes y anio son valores válidos
-        if mes is None or anio is None:
-            raise ValueError("Formato de mes y año no es valido, deben ser enteros y positivos.")
         if not isinstance(mes, int) or not isinstance(anio, int):
             raise ValueError("Formato de mes y año no es valido, deben ser enteros y positivos.")
         if mes < 1 or mes > 12:
@@ -158,6 +156,10 @@ def obtener_diagramas_filtrados():
     # Validar año positivo
     if anio <= 0:
         return jsonify({"error": "El año debe ser un valor positivo"}), 400
+    
+    # Validar año positivo
+    if mes <= 0:
+        return jsonify({"error": "El mes debe ser un valor positivo"}), 400
 
     # Calcular las fechas de inicio y fin utilizando el método `ajustar_fechas_mes_diferido`
     fecha_inicio, fecha_fin = ajustar_fechas_mes_diferido(mes, anio)
