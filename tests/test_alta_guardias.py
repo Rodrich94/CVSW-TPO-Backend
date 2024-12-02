@@ -2,7 +2,7 @@ import json
 from app.models import Establecimiento
 
 
-def test_alta_guardias_camino1(client, setup_database):
+def test_alta_guardias_camino1(client, setup_guardias):
     """Camino 1. Éxito."""
 
     # Obtener establecimientos
@@ -85,7 +85,7 @@ def test_alta_guardias_camino3(app, client, setup_database_sin_serv):
         assert len(establecimiento.servicios) == 0
 
 
-def test_alta_guardias_camino4(client, setup_database):
+def test_alta_guardias_camino4(client, setup_guardias):
     """Camino 4. Error al registrar guardias."""
 
     # Obtener establecimientos

@@ -1,6 +1,6 @@
 
 
-def test_consulta_actividades_camino1(client, setup_database):
+def test_consulta_actividades_camino1(client, setup_guardias):
     """Camino 1. Éxito."""
 
     # Obtener empleado
