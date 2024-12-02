@@ -1,6 +1,6 @@
 import pytest
 from app import create_app, db
-from app.models import Establecimiento, Servicio, Empleado,DiagramaMensual
+from app.models import ActividadExtraordinaria, CupoMensual, Guardia, Establecimiento, Servicio, Empleado, DiagramaMensual
 import json
 from datetime import date
 
@@ -150,7 +150,7 @@ def setup_datos_diagramas(app, client, setup_traslados):
                 "servicio_id": 2    # Servicio previamente configurado en los traslados
             },
         ]
-        
+
         # Enviar solicitudes POST al endpoint /diagrama para agregar los diagramas
         for diagrama_data in diagramas_data:
             response = client.post(
@@ -164,6 +164,49 @@ def setup_datos_diagramas(app, client, setup_traslados):
 
         # Commit a la base de datos para asegurar que los diagramas sean persistidos
         db.session.flush()  # Flush para asegurar que los cambios se reflejan inmediatamente
+
+        yield db  # Permite usar los datos durante los tests
+
+        # Limpiar la base de datos después de los tests
+        db.session.remove()
+
+
+@pytest.fixture
+def setup_guardias(app, setup_database):
+    """Fixture para configurar los datos de prueba de guardias"""
+    with app.app_context():
+        # Agregar un cupo CupoMensual
+        cupo_mensual = CupoMensual(fecha_ini='2024-01-01',
+                                   fecha_fin='2024-12-31',
+                                   total=100,
+                                   remanente=100,
+                                   servicio_id=1,
+                                   legajo_autorizante='E001')
+        db.session.add(cupo_mensual)
+        db.session.flush()
+
+        # Agregar una guardia
+        nueva_actividad = ActividadExtraordinaria(
+            fecha_ini='2024-11-11',
+            fecha_fin='2024-11-12',
+            estado='Pendiente',
+            servicio_id=1,
+            legajo_empleado='E001'
+        )
+        db.session.add(nueva_actividad)
+        db.session.flush()
+
+        nueva_guardia = Guardia(
+            id=nueva_actividad.id,
+            duracion=24,
+            tipo='activa',
+            cupo_mensual_id=cupo_mensual.id
+        )
+        db.session.add(nueva_guardia)
+        db.session.flush()
+
+        # Confirmar los cambios
+        db.session.commit()
 
         yield db  # Permite usar los datos durante los tests
 
